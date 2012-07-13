@@ -1,5 +1,6 @@
 /*
  * LocheGSplicer
+ * Copyright (C) 2012 Jeff P. Houde (Lochemage)
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,8 +15,6 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this library; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
- *
- * Author: Lochemage
  */
 
 
@@ -74,7 +73,7 @@ bool GCodeObject::loadFile(const QString &fileName)
          // Codes we care about:
          // 104 or 109: Setting nozzle temp.
          // 106 or 107: Fan on/off.
-         
+
          // Marlin custom codes:
          // 82: Set E codes absolute
          // 83: Set E codes relative while in Absolute Coordinates (G90) mode
