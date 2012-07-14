@@ -52,6 +52,7 @@ Window::Window()
    mZSlider->setValue(0 * 16);
    setWindowTitle(tr("Hello GL"));
 
+   // TEMP
    GCodeObject testObject;
    testObject.loadFile("data/ColorBase.KISS.gcode");
 }

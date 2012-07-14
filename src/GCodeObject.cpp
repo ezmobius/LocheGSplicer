@@ -38,6 +38,7 @@ bool GCodeObject::loadFile(const QString &fileName)
 
    if (!parser.loadFile(fileName))
    {
+      printf("Failed to load file \'%s\'", fileName.toStdString().c_str());
       return false;
    }
 
