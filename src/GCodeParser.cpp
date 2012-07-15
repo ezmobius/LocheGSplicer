@@ -137,13 +137,24 @@ double GCodeParser::codeValue()
       return 0.0;
    }
 
+   bool skipSpaces = true;
    char value[80] = {0,};
    for (int i = 0; i < mToken.length() - mCodePos; ++i)
    {
       char c = mToken.at(mCodePos + 1 + i);
+
+      // All number values and decimal point are taken as the value.
       if ((c >= '0' && c <= '9') || c == '.')
       {
          value[i] = c;
+         skipSpaces = false;
+      }
+      // Leading spaces between the code and value are skipped
+      else if (skipSpaces && c == ' ')
+      {
+         mCodePos++;
+         i--;
+         continue;
       }
       else
       {
@@ -167,13 +178,24 @@ long GCodeParser::codeValueLong()
       return 0.0;
    }
 
+   bool skipSpaces = true;
    char value[80] = {0,};
    for (int i = 0; i < mToken.length() - mCodePos; ++i)
    {
       char c = mToken.at(mCodePos + 1 + i);
+
+      // All number values are taken as the value.
       if (c >= '0' && c <= '9')
       {
          value[i] = c;
+         skipSpaces = false;
+      }
+      // Leading spaces between the code and value are skipped
+      else if (skipSpaces && c == ' ')
+      {
+         mCodePos++;
+         i--;
+         continue;
       }
       else
       {
@@ -183,6 +205,7 @@ long GCodeParser::codeValueLong()
 
    return QString(value).toLong();
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 QString GCodeParser::getLine()

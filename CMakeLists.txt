@@ -72,6 +72,7 @@ MAKE_DIRECTORY(${OUTPUT_LIBDIR})
 
 # Project files
 SET(HEADER_FILES
+   ${HEADER_PATH}/Constants.h
    ${HEADER_PATH}/GCodeObject.h
    ${HEADER_PATH}/GCodeParser.h
    ${HEADER_PATH}/qtlogo.h

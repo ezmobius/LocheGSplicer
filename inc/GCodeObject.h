@@ -21,7 +21,10 @@
 #ifndef G_CODE_OBJECT_H
 #define G_CODE_OBJECT_H
 
+#include <Constants.h>
+
 #include <QString>
+#include <vector>
 
 
 class GCodeObject
@@ -35,6 +38,8 @@ public:
 protected:
 
 private:
+
+   std::vector< std::vector<GCodeCommand> > mData;
 };
 
 #endif // G_CODE_OBJECT_H

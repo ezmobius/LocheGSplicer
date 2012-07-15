@@ -1,0 +1,139 @@
+
+#ifndef CONSTANTS_H
+#define CONSTANTS_H
+
+#include <QString>
+
+
+#define X 0
+#define Y 1
+#define Z 2
+#define E 3
+#define AXIS_NUM 4
+#define AXIS_NUM_NO_E 3
+
+const static char AXIS_NAME[AXIS_NUM] = {'X', 'Y', 'Z', 'E'};
+
+#define INCHES_TO_MM 25.4
+
+enum GCodeType
+{
+   // Core G Codes
+   GCODE_EXTRUDER_MOVEMENT0               = 1000,  // G0
+   GCODE_EXTRUDER_MOVEMENT1               = 1001,  // G1
+   GCODE_CW_ARC                           = 1002,  // G2
+   GCODE_CCW_ARC                          = 1003,  // G3
+   GCODE_DWELL                            = 1004,  // G4
+   GCODE_HOME                             = 1028,  // G28
+   GCODE_ABSOLUTE_COORDS                  = 1090,  // G90
+   GCODE_RELATIVE_COORDS                  = 1091,  // G91
+   GCODE_CURRENT_POSITION                 = 1092,  // G92
+
+   // Non-Marlin G Codes
+   GCODE_INCHES_MODE                      = 1020,  // G20
+   GCODE_MILLIMETERS_MODE                 = 1021,  // G21
+
+   // Reprap M Codes
+   MCODE_SET_EXTRUDER_TEMP                = 2104,  // M104
+   MCODE_GET_EXTRUDER_TEMP                = 2105,  // M105
+   MCODE_FAN_ENABLE                       = 2106,  // M106
+   MCODE_FAN_DISABLE                      = 2107,  // M107
+   MCODE_SET_EXTRUDER_TEMP_WAIT           = 2109,  // M109
+   MCODE_GET_POSITION                     = 2114,  // M114
+
+   // Marlin custom codes.
+   MCODE_ENABLE_STEPPERS                  = 2017,  // M17
+   MCODE_DISABLE_STEPPERS                 = 2018,  // M18
+   MCODE_LIST_SD_CARD                     = 2020,  // M20
+   MCODE_INIT_SD_CARD                     = 2021,  // M21
+   MCODE_RELEASE_SD_CARD                  = 2022,  // M22
+   MCODE_SELECT_SD_FILE                   = 2023,  // M23
+   MCODE_RESUME_SD_PRINT                  = 2024,  // M24
+   MCODE_PAUSE_SD_PRINT                   = 2025,  // M25
+   MCODE_SET_SD_POSITION                  = 2026,  // M26
+   MCODE_SD_PRINT_STATUS                  = 2027,  // M27
+   MCODE_START_SD_WRITE                   = 2028,  // M28
+   MCODE_STOP_SD_WRITE                    = 2029,  // M29
+   MCODE_DELETE_SD_FILE                   = 2030,  // M30
+   MCODE_TIME_SINCE_LAST_TEMP_OR_SD_START = 2031,  // M31
+   MCODE_PIN_CHANGE                       = 2042,  // M42
+   MCODE_PSU_ON                           = 2080,  // M80
+   MCODE_PSU_OFF                          = 2081,  // M81
+   MCODE_E_ABSOLUTE_COORDS                = 2082,  // M82
+   MCODE_E_RELATIVE_COORDS                = 2083,  // M83
+   MCODE_DISABLE_STEPPERS_TILL_NEXT_MOVE  = 2084,  // M84
+   MCODE_INACTIVITY_SHUTDOWN_TIME         = 2085,  // M85
+   MCODE_SET_AXIS_STEPS                   = 2092,  // M92
+   MCODE_OUTPUT_POSITION                  = 2114,  // M114
+   MCODE_OUTPUT_CAPABILITIES              = 2115,  // M115
+   MCODE_DISPLAY_MESSAGE                  = 2117,  // M117
+   MCODE_OUTPUT_ENDSTOP_STATUS            = 2119,  // M119
+   MCODE_SET_BED_TEMP                     = 2140,  // M140
+   MCODE_SET_BED_TEMP_WAIT                = 2190,  // M190
+   MCODE_SET_FILAMENT_DIAMETER            = 2200,  // M200
+   MCODE_SET_MAX_ACCEL_PRINT              = 2201,  // M201
+   MCODE_SET_MAX_ACCEL_TRAVEL             = 2202,  // M202
+   MCODE_SET_MAX_FEEDRATE                 = 2203,  // M203
+   MCODE_SET_DEFAULT_ACCEL                = 2204,  // M204
+   MCODE_SET_MIN_TRAVEL                   = 2205,  // M205
+   MCODE_SET_HOMING_OFFSET                = 2206,  // M206
+   MCODE_SET_SPEED_FACTOR                 = 2220,  // M220
+   MCODE_SET_EXTRUDE_FACTOR               = 2221,  // M221
+   MCODE_TRIGGER_CAMERA                   = 2240,  // M240
+   MCODE_SET_PID                          = 2301,  // M301
+   MCODE_ALLOW_COLD_EXTRUDES              = 2302,  // M302
+   MCODE_PID_RELAY_AUTOTUNE               = 2303,  // M303
+   MCODE_FINISH_ALL_MOVES                 = 2400,  // M400
+   MCODE_STORE_PARAMS_EEPROM              = 2500,  // M500
+   MCODE_READ_PARAMS_EEPROM               = 2501,  // M501
+   MCODE_RESET_PARAMS_EEPROM              = 2502,  // M502
+   MCODE_PRINT_PARAMS_EEPROM              = 2503,  // M503
+   MCODE_RESTART                          = 2999,  // M999
+
+   MCODE_EMERGENCY_STOP                   = 2000,  // M0
+};
+
+struct GCodeCommand
+{
+   GCodeCommand()
+   {
+      clear();
+   }
+
+   void clear()
+   {
+      type = -1;
+
+      for (int index = 0; index < AXIS_NUM; ++index)
+      {
+         hasAxis[index] = false;
+         axisValue[index] = 0.0;
+      }
+
+      hasF = false;
+      hasS = false;
+      hasP = false;
+
+      f = 0.0;
+      s = 0.0;
+      p = 0.0;
+   }
+
+   int type;
+
+   QString command;
+   QString comment;
+
+   bool hasAxis[AXIS_NUM];
+   double axisValue[AXIS_NUM];
+
+   bool hasF;
+   bool hasS;
+   bool hasP;
+
+   double f;
+   double s;
+   double p;
+};
+
+#endif  // CONSTANTS_H
