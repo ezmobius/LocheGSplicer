@@ -175,13 +175,16 @@ void VisualizerView::mouseMoveEvent(QMouseEvent *event)
    int dx = event->x() - mLastPos.x();
    int dy = event->y() - mLastPos.y();
 
-   if (event->buttons() & Qt::LeftButton) {
+   if (event->buttons() & (Qt::LeftButton | Qt::RightButton))
+   {
       setXRotation(mRotX + 8 * dy);
       setYRotation(mRotY + 8 * dx);
-   } else if (event->buttons() & Qt::RightButton) {
-      setXRotation(mRotX + 8 * dy);
-      setZRotation(mRotZ + 8 * dx);
    }
+   //else if (event->buttons() & Qt::RightButton)
+   //{
+   //   setXRotation(mRotX + 8 * dy);
+   //   setZRotation(mRotZ + 8 * dx);
+   //}
    mLastPos = event->pos();
 }
 

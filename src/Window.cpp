@@ -30,28 +30,28 @@ Window::Window()
 {
    mVisualizerView = new VisualizerView();
 
-   mXSlider = createSliderWidget();
-   mYSlider = createSliderWidget();
-   mZSlider = createSliderWidget();
+   //mXSlider = createSliderWidget();
+   //mYSlider = createSliderWidget();
+   //mZSlider = createSliderWidget();
 
-   connect(mXSlider, SIGNAL(valueChanged(int)), mVisualizerView, SLOT(setXRotation(int)));
-   connect(mVisualizerView, SIGNAL(xRotationChanged(int)), mXSlider, SLOT(setValue(int)));
-   connect(mYSlider, SIGNAL(valueChanged(int)), mVisualizerView, SLOT(setYRotation(int)));
-   connect(mVisualizerView, SIGNAL(yRotationChanged(int)), mYSlider, SLOT(setValue(int)));
-   connect(mZSlider, SIGNAL(valueChanged(int)), mVisualizerView, SLOT(setZRotation(int)));
-   connect(mVisualizerView, SIGNAL(zRotationChanged(int)), mZSlider, SLOT(setValue(int)));
+   //connect(mXSlider, SIGNAL(valueChanged(int)), mVisualizerView, SLOT(setXRotation(int)));
+   //connect(mVisualizerView, SIGNAL(xRotationChanged(int)), mXSlider, SLOT(setValue(int)));
+   //connect(mYSlider, SIGNAL(valueChanged(int)), mVisualizerView, SLOT(setYRotation(int)));
+   //connect(mVisualizerView, SIGNAL(yRotationChanged(int)), mYSlider, SLOT(setValue(int)));
+   //connect(mZSlider, SIGNAL(valueChanged(int)), mVisualizerView, SLOT(setZRotation(int)));
+   //connect(mVisualizerView, SIGNAL(zRotationChanged(int)), mZSlider, SLOT(setValue(int)));
 
    QHBoxLayout *mainLayout = new QHBoxLayout;
    mainLayout->addWidget(mVisualizerView);
-   mainLayout->addWidget(mXSlider);
-   mainLayout->addWidget(mYSlider);
-   mainLayout->addWidget(mZSlider);
+   //mainLayout->addWidget(mXSlider);
+   //mainLayout->addWidget(mYSlider);
+   //mainLayout->addWidget(mZSlider);
    setLayout(mainLayout);
 
-   mXSlider->setValue(15 * 16);
-   mYSlider->setValue(345 * 16);
-   mZSlider->setValue(0 * 16);
-   setWindowTitle(tr("Hello GL"));
+   //mXSlider->setValue(15 * 16);
+   //mYSlider->setValue(345 * 16);
+   //mZSlider->setValue(0 * 16);
+   setWindowTitle(tr("LocheGSplicer"));
 
    // TEMP
    mTestObject1 = new GCodeObject();
@@ -63,17 +63,17 @@ Window::Window()
    mVisualizerView->addObject(mTestObject2, 1);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-QSlider *Window::createSliderWidget()
-{
-   QSlider *slider = new QSlider(Qt::Vertical);
-   slider->setRange(0, 360 * 16);
-   slider->setSingleStep(16);
-   slider->setPageStep(15 * 16);
-   slider->setTickInterval(15 * 16);
-   slider->setTickPosition(QSlider::TicksRight);
-   return slider;
-}
+//////////////////////////////////////////////////////////////////////////////////
+//QSlider *Window::createSliderWidget()
+//{
+//   QSlider *slider = new QSlider(Qt::Vertical);
+//   slider->setRange(0, 360 * 16);
+//   slider->setSingleStep(16);
+//   slider->setPageStep(15 * 16);
+//   slider->setTickInterval(15 * 16);
+//   slider->setTickPosition(QSlider::TicksRight);
+//   return slider;
+//}
 
 ////////////////////////////////////////////////////////////////////////////////
 void Window::keyPressEvent(QKeyEvent *e)

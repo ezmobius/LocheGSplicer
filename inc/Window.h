@@ -41,12 +41,9 @@ protected:
    void keyPressEvent(QKeyEvent *event);
 
 private:
-   QSlider *createSliderWidget();
+   //QSlider *createSliderWidget();
 
    VisualizerView *mVisualizerView;
-   QSlider *mXSlider;
-   QSlider *mYSlider;
-   QSlider *mZSlider;
 
    // TEMP
    GCodeObject* mTestObject1;
