@@ -23,7 +23,11 @@
 
 #include <QGLWidget>
 
+#include <Constants.h>
+
+
 class QtLogo;
+class GCodeObject;
 
 class VisualizerView : public QGLWidget
 {
@@ -32,6 +36,15 @@ class VisualizerView : public QGLWidget
 public:
    VisualizerView(QWidget *parent = 0);
    virtual ~VisualizerView();
+
+   /**
+    * Adds an object into the visualizer.
+    *
+    * @param[in]  object     The object.
+    * @param[in]  extruder   The extruder that this object will use.
+    */
+   void addObject(GCodeObject* object, int extruder);
+   void removeObject(GCodeObject* object);
 
    QSize minimumSizeHint() const;
    QSize sizeHint() const;
@@ -59,8 +72,10 @@ private:
    int mRotY;
    int mRotZ;
    QPoint mLastPos;
-   QColor mGreenColor;
-   QColor mPurpleColor;
+   
+   QColor mBackgroundColor;
+   std::vector<QColor> mExtruderColors;
+   std::vector<VisualizerObjectData> mObjectList;
 };
 
 #endif // VISUALIZER_VIEW_H

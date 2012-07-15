@@ -23,10 +23,12 @@
 
 #include <QWidget>
 
+
 QT_BEGIN_NAMESPACE
 class QSlider;
 QT_END_NAMESPACE
 class VisualizerView;
+class GCodeObject;
 
 class Window : public QWidget
 {
@@ -45,6 +47,10 @@ private:
    QSlider *mXSlider;
    QSlider *mYSlider;
    QSlider *mZSlider;
+
+   // TEMP
+   GCodeObject* mTestObject1;
+   GCodeObject* mTestObject2;
 };
 
 #endif // WINDOW_H

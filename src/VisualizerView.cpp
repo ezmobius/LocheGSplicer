@@ -24,6 +24,7 @@
 #include <math.h>
 
 #include <VisualizerView.h>
+#include <GCodeObject.h>
 #include <qtlogo.h>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -40,13 +41,28 @@ VisualizerView::VisualizerView(QWidget *parent)
    mRotY = 0;
    mRotZ = 0;
 
-   mGreenColor = QColor::fromCmykF(0.40, 0.0, 1.0, 0.0);
-   mPurpleColor = QColor::fromCmykF(0.39, 0.39, 0.0, 0.0);
+   // TODO: Add preference to set background and extruder colors.
+   mBackgroundColor = QColor::fromCmykF(0.39, 0.39, 0.0, 0.0);
+
+   mExtruderColors.push_back(Qt::red);
+   mExtruderColors.push_back(Qt::green);
+   mExtruderColors.push_back(Qt::blue);
+   mExtruderColors.push_back(Qt::yellow);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 VisualizerView::~VisualizerView()
 {
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void VisualizerView::addObject(GCodeObject* object, int extruder)
+{
+   VisualizerObjectData data;
+   data.object = object;
+   data.extruder = extruder;
+
+   mObjectList.push_back(data);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -106,10 +122,10 @@ void VisualizerView::setZRotation(int angle)
 ////////////////////////////////////////////////////////////////////////////////
 void VisualizerView::initializeGL()
 {
-   qglClearColor(mPurpleColor.dark());
+   qglClearColor(mBackgroundColor.dark());
 
    mLogo = new QtLogo(this, 64);
-   mLogo->setColor(mGreenColor.dark());
+   mLogo->setColor(Qt::darkGreen);
 
    glEnable(GL_DEPTH_TEST);
    glEnable(GL_CULL_FACE);
@@ -119,6 +135,7 @@ void VisualizerView::initializeGL()
    glEnable(GL_MULTISAMPLE);
    static GLfloat lightPosition[4] = { 0.5, 5.0, 7.0, 1.0 };
    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+   glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -126,7 +143,7 @@ void VisualizerView::paintGL()
 {
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    glLoadIdentity();
-   glTranslatef(0.0, 0.0, -10.0);
+   glTranslatef(0.0, 0.0, -1.0);
    glRotatef(mRotX / 16.0, 1.0, 0.0, 0.0);
    glRotatef(mRotY / 16.0, 0.0, 1.0, 0.0);
    glRotatef(mRotZ / 16.0, 0.0, 0.0, 1.0);
@@ -141,11 +158,8 @@ void VisualizerView::resizeGL(int width, int height)
 
    glMatrixMode(GL_PROJECTION);
    glLoadIdentity();
-#ifdef QT_OPENGL_ES_1
-   glOrthof(-0.5, +0.5, -0.5, +0.5, 4.0, 15.0);
-#else
-   glOrtho(-0.5, +0.5, -0.5, +0.5, 4.0, 15.0);
-#endif
+   //glOrtho(-0.5, +0.5, -0.5, +0.5, 4.0, 15.0);
+   gluPerspective(45.0f, width/height, 0.1f, 100.0f);
    glMatrixMode(GL_MODELVIEW);
 }
 

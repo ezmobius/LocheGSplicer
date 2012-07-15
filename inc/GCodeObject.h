@@ -21,10 +21,10 @@
 #ifndef G_CODE_OBJECT_H
 #define G_CODE_OBJECT_H
 
-#include <Constants.h>
-
 #include <QString>
 #include <vector>
+
+#include <Constants.h>
 
 
 class GCodeObject
@@ -33,6 +33,9 @@ public:
    GCodeObject();
    virtual ~GCodeObject();
 
+   /**
+    * Load a specified gcode file.
+    */
    bool loadFile(const QString &fileName);
 
 protected:
@@ -40,6 +43,8 @@ protected:
 private:
 
    std::vector< std::vector<GCodeCommand> > mData;
+
+   double mOffsetPos[AXIS_NUM_NO_E];
 };
 
 #endif // G_CODE_OBJECT_H

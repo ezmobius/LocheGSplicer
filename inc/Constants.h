@@ -1,10 +1,33 @@
+/*
+ * LocheGSplicer
+ * Copyright (C) 2012 Jeff P. Houde (Lochemage)
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
 
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
 #include <QString>
 
+class GCodeObject;
 
+
+/**
+ * Some commonly used indexed type definitions.
+ */
 #define X 0
 #define Y 1
 #define Z 2
@@ -14,8 +37,14 @@
 
 const static char AXIS_NAME[AXIS_NUM] = {'X', 'Y', 'Z', 'E'};
 
+/**
+ * Various conversion multipliers.
+ */
 #define INCHES_TO_MM 25.4
 
+/**
+ * GCode G and M Type definitions.
+ */
 enum GCodeType
 {
    // Core G Codes
@@ -93,6 +122,9 @@ enum GCodeType
    MCODE_EMERGENCY_STOP                   = 2000,  // M0
 };
 
+/**
+ * Structural data for each G code command.
+ */
 struct GCodeCommand
 {
    GCodeCommand()
@@ -134,6 +166,12 @@ struct GCodeCommand
    double f;
    double s;
    double p;
+};
+
+struct VisualizerObjectData
+{
+   GCodeObject*   object;
+   int            extruder;
 };
 
 #endif  // CONSTANTS_H

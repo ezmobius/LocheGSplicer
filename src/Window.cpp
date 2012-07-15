@@ -21,8 +21,9 @@
 #include <QtGui>
 
 #include <VisualizerView.h>
-#include <Window.h>
 #include <GCodeObject.h>
+#include <Window.h>
+
 
 ////////////////////////////////////////////////////////////////////////////////
 Window::Window()
@@ -53,8 +54,13 @@ Window::Window()
    setWindowTitle(tr("Hello GL"));
 
    // TEMP
-   GCodeObject testObject;
-   testObject.loadFile("data/ColorBase.KISS.gcode");
+   mTestObject1 = new GCodeObject();
+   mTestObject2 = new GCodeObject();
+   mTestObject1->loadFile("data/ColorBase.KISS.gcode");
+   mTestObject2->loadFile("data/ColorPatern.KISS.gcode");
+
+   mVisualizerView->addObject(mTestObject1, 0);
+   mVisualizerView->addObject(mTestObject2, 1);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
