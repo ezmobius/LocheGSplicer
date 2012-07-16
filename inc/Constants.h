@@ -136,9 +136,10 @@ struct GCodeCommand
    {
       type = -1;
 
+      hasAxis = false;
+
       for (int index = 0; index < AXIS_NUM; ++index)
       {
-         hasAxis[index] = false;
          axisValue[index] = 0.0;
       }
 
@@ -156,7 +157,7 @@ struct GCodeCommand
    QString command;
    QString comment;
 
-   bool hasAxis[AXIS_NUM];
+   bool hasAxis;
    double axisValue[AXIS_NUM];
 
    bool hasF;
@@ -172,6 +173,9 @@ struct VisualizerObjectData
 {
    GCodeObject*   object;
    int            extruder;
+
+   double*        vertexBuffer;
+   int            vertexCount;
 };
 
 #endif  // CONSTANTS_H

@@ -79,6 +79,11 @@ bool GCodeParser::parseNext()
       return false;
    }
 
+   if (mFile.atEnd())
+   {
+      return false;
+   }
+
    mToken = mFile.readLine();
    mComment.clear();
 
@@ -139,7 +144,7 @@ double GCodeParser::codeValue()
 
    bool skipSpaces = true;
    char value[80] = {0,};
-   for (int i = 0; i < mToken.length() - mCodePos; ++i)
+   for (int i = 0; i < mToken.length() - mCodePos - 1; ++i)
    {
       char c = mToken.at(mCodePos + 1 + i);
 
@@ -180,7 +185,7 @@ long GCodeParser::codeValueLong()
 
    bool skipSpaces = true;
    char value[80] = {0,};
-   for (int i = 0; i < mToken.length() - mCodePos; ++i)
+   for (int i = 0; i < mToken.length() - mCodePos - 1; ++i)
    {
       char c = mToken.at(mCodePos + 1 + i);
 

@@ -46,6 +46,8 @@ public:
    void addObject(GCodeObject* object, int extruder);
    void removeObject(GCodeObject* object);
 
+   void clearObjects();
+
    QSize minimumSizeHint() const;
    QSize sizeHint() const;
 
@@ -66,8 +68,16 @@ protected:
    void mousePressEvent(QMouseEvent *event);
    void mouseMoveEvent(QMouseEvent *event);
 
+   void drawObject(const VisualizerObjectData& object);
+
 private:
-   QtLogo *mLogo;
+
+   /**
+    * Generate geometry data for the given object.
+    */
+   void visualize(VisualizerObjectData& data);
+
+   //QtLogo *mLogo;
    int mRotX;
    int mRotY;
    int mRotZ;

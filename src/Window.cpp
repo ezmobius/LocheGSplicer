@@ -56,11 +56,13 @@ Window::Window()
    // TEMP
    mTestObject1 = new GCodeObject();
    mTestObject2 = new GCodeObject();
-   mTestObject1->loadFile("data/ColorBase.KISS.gcode");
-   mTestObject2->loadFile("data/ColorPatern.KISS.gcode");
+   mTestObject1->loadFile("../data/ColorBase.gcode");
+   mTestObject2->loadFile("../data/ColorPatern.gcode");
 
    mVisualizerView->addObject(mTestObject1, 0);
    mVisualizerView->addObject(mTestObject2, 1);
+
+   mTestObject2->setOffsetPos(2.0, 2.0, 0.0);
 }
 
 //////////////////////////////////////////////////////////////////////////////////

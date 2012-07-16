@@ -66,22 +66,29 @@ bool GCodeObject::loadFile(const QString &fileName)
    // Parse the gcode file, at the same time any codes we care about will have
    // special treatment while any codes we don't care about will simply be preserved
    // and included in the final product as is.
+   double lastZ = currentPos[Z];
+   double lastE = currentPos[E];
 
    while (parser.parseNext())
    {
+      code.clear();
       code.command = parser.getLine();
       code.comment = parser.getComment();
 
+      bool changeLayers = false;
+
       if (parser.codeSeen('G'))
       {
-         lValue = parser.codeValueLong();
+         lValue = 1000 + parser.codeValueLong();
 
-         code.type = 1000 + lValue;
+         code.type = lValue;
 
          // Codes we care about:
          // 0 or 1: Extruder movement.
          if (lValue == GCODE_EXTRUDER_MOVEMENT0 || lValue == GCODE_EXTRUDER_MOVEMENT1)
          {
+            code.hasAxis = true;
+
             for (int axis = 0; axis < AXIS_NUM; ++axis)
             {
                if (parser.codeSeen(AXIS_NAME[axis]))
@@ -94,16 +101,31 @@ bool GCodeObject::loadFile(const QString &fileName)
                   {
                      currentPos[axis] += (parser.codeValue() * coordConversion);
                   }
-
-                  code.axisValue[axis] = currentPos[axis];
-                  code.hasAxis[axis] = true;
                }
+               code.axisValue[axis] = currentPos[axis];
             }
 
             if (parser.codeSeen('F'))
             {
                code.f = parser.codeValue();
                code.hasF = true;
+            }
+
+            // If we are extruding some material,
+            // determine if the layer has changed.
+            if (lastE < currentPos[E])
+            {
+               lastE = currentPos[E];
+
+               if (lastZ < currentPos[Z])
+               {
+                  lastZ = currentPos[Z];
+                  changeLayers = true;
+               }
+            }
+            else if (currentPos[E] == 0.0)
+            {
+               lastE = 0.0;
             }
          }
 
@@ -125,22 +147,32 @@ bool GCodeObject::loadFile(const QString &fileName)
          // 28: Home axes.
          if (lValue == GCODE_HOME)
          {
+            code.hasAxis = true;
+
+            // The extruder position does not change from this command.
+            code.axisValue[E] = currentPos[E];
+
             bool foundAny = false;
             for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
             {
                if (parser.codeSeen(AXIS_NAME[axis]))
                {
-                  code.hasAxis[axis] = true;
                   foundAny = true;
+
                   currentPos[axis] = 0.0;
                   offsetPos[axis] = 0.0;
 
+                  // Not sure if this is correct, as it is contrary to Marlin's
+                  // documentation, but according to the source code, this is what
+                  // happens when a value is specified along with the axis to home.
                   dValue = parser.codeValue();
                   if (dValue != 0.0)
                   {
                      offsetPos[axis] = dValue + homeOffset[axis];
                   }
                }
+
+               code.axisValue[axis] = currentPos[axis];
             }
 
             // If the code was used without specifying any
@@ -149,7 +181,7 @@ bool GCodeObject::loadFile(const QString &fileName)
             {
                for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
                {
-                  code.hasAxis[axis] = true;
+                  code.axisValue[axis] = 0.0;
                   currentPos[axis] = 0.0;
                   offsetPos[axis] = 0.0;
                }
@@ -223,9 +255,9 @@ bool GCodeObject::loadFile(const QString &fileName)
       }
       else if (parser.codeSeen('M'))
       {
-         lValue = parser.codeValueLong();
+         lValue = 2000 + parser.codeValueLong();
 
-         code.type = 2000 + lValue;
+         code.type = lValue;
 
          // Codes we care about:
          // Marlin custom codes:
@@ -293,12 +325,51 @@ bool GCodeObject::loadFile(const QString &fileName)
          continue;
       }
 
-      // Each gcode line we read will be added to our current
-      // layer data.
+      // If we have changed layers, put the current layer's data into the
+      // layer stack and begin a new one.
+      if (changeLayers)
+      {
+         mData.push_back(layer);
+         layer.clear();
+      }
+
+      // Add the current code value to the current layer.
       layer.push_back(code);
    }
 
+   // Add our final layer.
+   if (!layer.empty())
+   {
+      mData.push_back(layer);
+   }
+
    return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void GCodeObject::setOffsetPos(double x, double y, double z)
+{
+   mOffsetPos[X] = x;
+   mOffsetPos[Y] = y;
+   mOffsetPos[Z] = z;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const double* GCodeObject::getOffsetPos() const
+{
+   return mOffsetPos;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+int GCodeObject::getLevelCount() const
+{
+   return (int)mData.size();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const std::vector<GCodeCommand>& GCodeObject::getLevel(int levelIndex)
+{
+   return mData[levelIndex];
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -38,6 +38,12 @@ public:
     */
    bool loadFile(const QString &fileName);
 
+   void setOffsetPos(double x, double y, double z);
+   const double* getOffsetPos() const;
+
+   int getLevelCount() const;
+   const std::vector<GCodeCommand>& getLevel(int levelIndex);
+
 protected:
 
 private:
