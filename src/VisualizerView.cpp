@@ -189,12 +189,12 @@ void VisualizerView::initializeGL()
    glEnable(GL_DEPTH_TEST);
    glEnable(GL_CULL_FACE);
    glShadeModel(GL_SMOOTH);
-   glEnable(GL_LIGHTING);
-   glEnable(GL_LIGHT0);
+   //glEnable(GL_LIGHTING);
+   //glEnable(GL_LIGHT0);
    glEnable(GL_MULTISAMPLE);
    glEnable(GL_COLOR_MATERIAL);
-   static GLfloat lightPosition[4] = { 0.5, 5.0, 7.0, 1.0 };
-   glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+   //static GLfloat lightPosition[4] = { 0.5, 5.0, 7.0, 1.0 };
+   //glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 }
 
@@ -203,7 +203,7 @@ void VisualizerView::paintGL()
 {
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    glLoadIdentity();
-   glTranslatef(0.0, 0.0, -100.0);
+   glTranslatef(0.0, 0.0, -50.0);
    glRotatef(mRotX / 16.0, 1.0, 0.0, 0.0);
    glRotatef(mRotY / 16.0, 0.0, 1.0, 0.0);
    glRotatef(mRotZ / 16.0, 0.0, 0.0, 1.0);
@@ -244,13 +244,8 @@ void VisualizerView::mouseMoveEvent(QMouseEvent *event)
    if (event->buttons() & (Qt::LeftButton | Qt::RightButton))
    {
       setXRotation(mRotX + 8 * dy);
-      setYRotation(mRotY + 8 * dx);
+      setZRotation(mRotZ + 8 * dx);
    }
-   //else if (event->buttons() & Qt::RightButton)
-   //{
-   //   setXRotation(mRotX + 8 * dy);
-   //   setZRotation(mRotZ + 8 * dx);
-   //}
    mLastPos = event->pos();
 }
 
@@ -322,7 +317,7 @@ void VisualizerView::visualize(VisualizerObjectData& data)
    if (data.vertexCount > 0)
    {
       data.vertexBuffer = new double[data.vertexCount * 3];
-      
+
       for (int axis = 0; axis < AXIS_NUM; ++axis)
       {
          lastPos[axis] = 0.0;

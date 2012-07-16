@@ -62,7 +62,10 @@ Window::Window()
    mVisualizerView->addObject(mTestObject1, 0);
    mVisualizerView->addObject(mTestObject2, 1);
 
-   mTestObject2->setOffsetPos(2.0, 2.0, 0.0);
+   mTestObject1->setOffsetPos(-18.0, -18.0, 0.0);
+   mTestObject2->setOffsetPos(-16.0, -16.0, 0.0);
+   //mTestObject1->setOffsetPos(0.0, -16.0, 0.0);
+   //mTestObject2->setOffsetPos(-26.0, -16.0, 0.0);
 }
 
 //////////////////////////////////////////////////////////////////////////////////
