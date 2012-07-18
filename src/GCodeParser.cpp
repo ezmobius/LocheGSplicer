@@ -30,7 +30,6 @@ GCodeParser::GCodeParser()
 {
    mCommentMarkers.append(';');
    mCommentMarkers.append('(');
-   mCommentMarkers.append(')');
 }
 
 ////////////////////////////////////////////////////////////////////////////////

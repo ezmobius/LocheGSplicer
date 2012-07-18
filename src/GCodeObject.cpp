@@ -23,10 +23,14 @@
 
 
 ////////////////////////////////////////////////////////////////////////////////
-GCodeObject::GCodeObject()
+GCodeObject::GCodeObject(const PreferenceData& prefs)
+   : mExtruderIndex(0)
+   , mPrefs(prefs)
 {
    for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
    {
+      mMinBounds[axis] = 0.0;
+      mMaxBounds[axis] = 0.0;
       mOffsetPos[axis] = 0.0;
    }
 }
@@ -53,11 +57,10 @@ bool GCodeObject::loadFile(const QString &fileName)
    double dValue = 0.0;
    long lValue = 0;
    double coordConversion = 1.0;
+   bool firstBounds = true;
 
-   // TODO: Add global preferences to specify the
-   // default values for the following attributes.
-   bool absoluteMode = true;
-   bool absoluteEMode = true;
+   bool absoluteMode = mPrefs.startInAbsoluteMode;
+   bool absoluteEMode = mPrefs.startInAbsoluteEMode;
    double currentPos[AXIS_NUM] = {0.0,};
    double offsetPos[AXIS_NUM] = {0.0,};
    double homeOffset[AXIS_NUM_NO_E] = {0.0,};
@@ -120,6 +123,31 @@ bool GCodeObject::loadFile(const QString &fileName)
                {
                   lastZ = currentPos[Z];
                   changeLayers = true;
+               }
+
+               // Update the bounding volume.
+               if (!firstBounds)
+               {
+                  for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
+                  {
+                     if (mMinBounds[axis] > currentPos[axis])
+                     {
+                        mMinBounds[axis] = currentPos[axis];
+                     }
+                     if (mMaxBounds[axis] < currentPos[axis])
+                     {
+                        mMaxBounds[axis] = currentPos[axis];
+                     }
+                  }
+               }
+               else
+               {
+                  for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
+                  {
+                     mMinBounds[axis] = currentPos[axis];
+                     mMaxBounds[axis] = currentPos[axis];
+                  }
+                  firstBounds = false;
                }
             }
             else if (currentPos[E] == 0.0)
@@ -342,7 +370,36 @@ bool GCodeObject::loadFile(const QString &fileName)
       mData.push_back(layer);
    }
 
+   // Calculate our bounding center.
+   for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
+   {
+      mCenter[axis] = mMinBounds[axis] + ((mMaxBounds[axis] - mMinBounds[axis]) / 2.0);
+   }
+
+   // Offset the object so it is in the center of the build platform.
+   mOffsetPos[X] = (mPrefs.platformWidth / 2.0) - mCenter[X];
+   mOffsetPos[Y] = (mPrefs.platformHeight / 2.0) - mCenter[Y];
+   mOffsetPos[Z] = 0.0;
+
    return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const double* GCodeObject::getMinBounds() const
+{
+   return mMinBounds;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const double* GCodeObject::getMaxBounds() const
+{
+   return mMaxBounds;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const double* GCodeObject::getCenter() const
+{
+   return mCenter;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -357,6 +414,18 @@ void GCodeObject::setOffsetPos(double x, double y, double z)
 const double* GCodeObject::getOffsetPos() const
 {
    return mOffsetPos;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void GCodeObject::setExtruder(int extruderIndex)
+{
+   mExtruderIndex = extruderIndex;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+int GCodeObject::getExtruder() const
+{
+   return mExtruderIndex;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

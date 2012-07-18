@@ -23,6 +23,8 @@
 #include <QColor>
 #include <QString>
 
+#include <vector>
+
 
 class GCodeObject;
 
@@ -202,10 +204,37 @@ struct ExtruderData
 struct VisualizerObjectData
 {
    GCodeObject*   object;
-   int            extruder;
 
    double*        vertexBuffer;
    int            vertexCount;
+};
+
+struct PreferenceData
+{
+   PreferenceData()
+   {
+      exportComments = true;
+      extruderList.push_back(ExtruderData(Qt::green));
+      extruderList.push_back(ExtruderData(Qt::blue, 23.5));
+      backgroundColor = QColor::fromCmykF(0.39, 0.39, 0.0, 0.0).dark();
+
+      platformWidth = 200;
+      platformHeight = 200;
+
+      startInAbsoluteMode = true;
+      startInAbsoluteEMode = true;
+   }
+
+   bool exportComments;
+   std::vector<ExtruderData> extruderList;
+   QColor backgroundColor;
+
+   int platformWidth;
+   int platformHeight;
+
+   // Advanced properties.
+   bool startInAbsoluteMode;
+   bool startInAbsoluteEMode;
 };
 
 #endif  // CONSTANTS_H

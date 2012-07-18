@@ -27,15 +27,8 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 Window::Window()
-   : mIncludeComments(true)
-   , mTestObject1(NULL)
-   , mTestObject2(NULL)
 {
-   // Initialize our default extruder data.
-   mExtruders.push_back(ExtruderData(Qt::green));
-   mExtruders.push_back(ExtruderData(Qt::blue, 23.5));
-
-   mVisualizerView = new VisualizerView(mExtruders);
+   mVisualizerView = new VisualizerView(mPrefs);
 
    //mXSlider = createSliderWidget();
    //mYSlider = createSliderWidget();
@@ -61,18 +54,23 @@ Window::Window()
    setWindowTitle(tr("LocheGSplicer"));
 
    // TEMP
-   mTestObject1 = new GCodeObject();
-   mTestObject2 = new GCodeObject();
-   mTestObject1->loadFile("../data/ColorBase.gcode");
-   mTestObject2->loadFile("../data/ColorPatern.gcode");
+   GCodeObject* object1 = new GCodeObject(mPrefs);
+   GCodeObject* object2 = new GCodeObject(mPrefs);
+   object1->loadFile("../data/ColorBase.gcode");
+   object2->loadFile("../data/ColorPatern.gcode");
+   object2->setExtruder(1);
 
-   mVisualizerView->addObject(mTestObject1, 0);
-   mVisualizerView->addObject(mTestObject2, 1);
+   mVisualizerView->addObject(object1);
+   mVisualizerView->addObject(object2);
 
-   mTestObject1->setOffsetPos(-18.0, -18.0, 0.0);
-   mTestObject2->setOffsetPos(-16.0, -16.0, 0.0);
-   //mTestObject1->setOffsetPos(0.0, -16.0, 0.0);
-   //mTestObject2->setOffsetPos(-26.0, -16.0, 0.0);
+   //object1->setOffsetPos(-18.0, -18.0, 0.0);
+   //object2->setOffsetPos(-16.0, -16.0, 0.0);
+   //object1->setOffsetPos(0.0, -16.0, 0.0);
+   //object2->setOffsetPos(-26.0, -16.0, 0.0);
+   //object2->setOffsetPos(object2->getOffsetPos()[X] - 2.0, object2->getOffsetPos()[Y] - 2.0, 0.0);
+
+   mObjectList.push_back(object1);
+   mObjectList.push_back(object2);
 }
 
 //////////////////////////////////////////////////////////////////////////////////

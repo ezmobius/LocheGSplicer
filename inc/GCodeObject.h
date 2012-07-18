@@ -29,7 +29,7 @@
 class GCodeObject
 {
 public:
-   GCodeObject();
+   GCodeObject(const PreferenceData& prefs);
    virtual ~GCodeObject();
 
    /**
@@ -37,8 +37,15 @@ public:
     */
    bool loadFile(const QString &fileName);
 
+   const double* getMinBounds() const;
+   const double* getMaxBounds() const;
+   const double* getCenter() const;
+
    void setOffsetPos(double x, double y, double z);
    const double* getOffsetPos() const;
+
+   void setExtruder(int extruderIndex);
+   int getExtruder() const;
 
    int getLevelCount() const;
    const std::vector<GCodeCommand>& getLevel(int levelIndex);
@@ -47,9 +54,17 @@ protected:
 
 private:
 
+   const PreferenceData& mPrefs;
+
    std::vector< std::vector<GCodeCommand> > mData;
 
+   // Bounding Box
+   double mMinBounds[AXIS_NUM_NO_E];
+   double mMaxBounds[AXIS_NUM_NO_E];
+   double mCenter[AXIS_NUM_NO_E];
+
    double mOffsetPos[AXIS_NUM_NO_E];
+   int    mExtruderIndex;
 };
 
 #endif // G_CODE_OBJECT_H

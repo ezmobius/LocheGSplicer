@@ -44,14 +44,11 @@ protected:
 private:
    //QSlider *createSliderWidget();
 
+   PreferenceData mPrefs;
+
    VisualizerView *mVisualizerView;
 
-   bool mIncludeComments;
-   std::vector<ExtruderData> mExtruders;
-
-   // TEMP
-   GCodeObject* mTestObject1;
-   GCodeObject* mTestObject2;
+   std::vector<GCodeObject*> mObjectList;
 };
 
 #endif // WINDOW_H

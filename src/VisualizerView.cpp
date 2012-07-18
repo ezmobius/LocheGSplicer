@@ -18,11 +18,11 @@
  */
 
 
-#include <QtGui>
-#include <QtOpenGL>
-
 #include <VisualizerView.h>
 #include <GCodeObject.h>
+
+#include <QtGui>
+#include <QtOpenGL>
 
 #include <math.h>
 #include <assert.h>
@@ -33,16 +33,29 @@
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
-VisualizerView::VisualizerView(const std::vector<ExtruderData>& extruders)
+VisualizerView::VisualizerView(const PreferenceData& prefs)
    : QGLWidget(QGLFormat(QGL::SampleBuffers), NULL)
-   , mExtruders(extruders)
+   , mPrefs(prefs)
 {
-   mRotX = 0;
-   mRotY = 0;
-   mRotZ = 0;
+   for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
+   {
+      mCameraRot[axis] = 0.0;
+      mCameraRotTarget[axis] = 0.0;
+      mCameraTrans[axis] = 0.0;
+      mCameraTransTarget[axis] = 0.0;
+   }
 
-   // TODO: Add preference to set background and extruder colors.
-   mBackgroundColor = QColor::fromCmykF(0.39, 0.39, 0.0, 0.0);
+   mCameraZoom = -50.0f;
+   mCameraZoomTarget = -50.0f;
+
+   mCameraTrans[X] = mPrefs.platformWidth / 2.0;
+   mCameraTrans[Y] = mPrefs.platformHeight / 2.0;
+   mCameraTransTarget[X] = mCameraTrans[X];
+   mCameraTransTarget[Y] = mCameraTrans[Y];
+
+   mUpdateTimer = new QTimer(this);
+   connect(mUpdateTimer, SIGNAL(timeout()), this, SLOT(updateTick()));
+   mUpdateTimer->start(100);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -52,15 +65,14 @@ VisualizerView::~VisualizerView()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void VisualizerView::addObject(GCodeObject* object, int extruder)
+void VisualizerView::addObject(GCodeObject* object)
 {
    VisualizerObjectData data;
    data.object = object;
-   data.extruder = extruder;
    data.vertexBuffer = NULL;
    data.vertexCount = 0;
 
-   visualize(data);
+   generateGeometry(data);
 
    mObjectList.push_back(data);
 }
@@ -79,9 +91,6 @@ void VisualizerView::removeObject(GCodeObject* object)
       VisualizerObjectData& data = mObjectList[objectIndex];
       if (data.object == object)
       {
-         delete data.object;
-         data.object = NULL;
-
          if (data.vertexBuffer)
          {
             delete [] data.vertexBuffer;
@@ -100,12 +109,6 @@ void VisualizerView::clearObjects()
    for (int objectIndex = 0; objectIndex < objectCount; ++objectIndex)
    {
       VisualizerObjectData& data = mObjectList[objectIndex];
-      if (data.object)
-      {
-         delete data.object;
-         data.object = NULL;
-      }
-
       if (data.vertexBuffer)
       {
          delete [] data.vertexBuffer;
@@ -128,46 +131,89 @@ QSize VisualizerView::sizeHint() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-static void qNormalizeAngle(int &angle)
+void VisualizerView::setXTranslation(double pos)
 {
-   while (angle < 0)
-      angle += 360 * 16;
-   while (angle > 360 * 16)
-      angle -= 360 * 16;
+   mCameraTransTarget[X] = pos;
+   emit xTranslationChanged(pos);
+   updateGL();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void VisualizerView::setXRotation(int angle)
+void VisualizerView::setYTranslation(double pos)
 {
-   qNormalizeAngle(angle);
-   if (angle != mRotX)
+   mCameraTransTarget[Y] = pos;
+   emit yTranslationChanged(pos);
+   updateGL();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void VisualizerView::setZTranslation(double pos)
+{
+   mCameraTransTarget[Z] = pos;
+   emit zTranslationChanged(pos);
+   updateGL();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+static void normalizeAngle(double &angle)
+{
+   while (angle < 0.0)
+      angle += 360.0;
+   while (angle > 360.0)
+      angle -= 360.0;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void VisualizerView::setXRotation(double angle)
+{
+   normalizeAngle(angle);
+   if (angle != mCameraRotTarget[X])
    {
-      mRotX = angle;
+      mCameraRotTarget[X] = angle;
       emit xRotationChanged(angle);
       updateGL();
    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void VisualizerView::setYRotation(int angle)
+void VisualizerView::setYRotation(double angle)
 {
-   qNormalizeAngle(angle);
-   if (angle != mRotY)
+   normalizeAngle(angle);
+   if (angle != mCameraRotTarget[Y])
    {
-      mRotY = angle;
+      mCameraRotTarget[Y] = angle;
       emit yRotationChanged(angle);
       updateGL();
    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void VisualizerView::setZRotation(int angle)
+void VisualizerView::setZRotation(double angle)
 {
-   qNormalizeAngle(angle);
-   if (angle != mRotZ)
+   normalizeAngle(angle);
+   if (angle != mCameraRotTarget[Z])
    {
-      mRotZ = angle;
+      mCameraRotTarget[Z] = angle;
       emit zRotationChanged(angle);
+      updateGL();
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void VisualizerView::setZoom(double zoom)
+{
+   if (zoom > -1.0) zoom = -1.0f;
+
+   mCameraZoomTarget = zoom;
+   emit zoomChanged(zoom);
+   updateGL();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void VisualizerView::updateTick()
+{
+   if (updateCamera())
+   {
       updateGL();
    }
 }
@@ -175,43 +221,82 @@ void VisualizerView::setZRotation(int angle)
 ////////////////////////////////////////////////////////////////////////////////
 void VisualizerView::initializeGL()
 {
-   qglClearColor(mBackgroundColor.dark());
+   qglClearColor(mPrefs.backgroundColor);
 
    glEnable(GL_DEPTH_TEST);
    glEnable(GL_CULL_FACE);
    glShadeModel(GL_SMOOTH);
+   //glEnable(GL_LIGHTING);
+   //glEnable(GL_LIGHT0);
    glEnable(GL_MULTISAMPLE);
    glEnable(GL_COLOR_MATERIAL);
+   //static GLfloat lightPosition[4] = { 0.5, 5.0, 7.0, 1.0 };
+   //glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool VisualizerView::updateCamera()
+{
+   bool changed = false;
+   double dist = 0.0;
+
+   // Update camera translation towards target.
+   for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
+   {
+      dist  = mCameraRotTarget[axis] - mCameraRot[axis];
+      double dist2 = mCameraRotTarget[axis] - (mCameraRot[axis] + 360.0);
+      if (fabs(dist) > fabs(dist2)) dist = dist2;
+      if (dist) changed = true;
+      mCameraRot[axis] += dist / 2.0;
+
+      dist = (mCameraTransTarget[axis] - mCameraTrans[axis]) / 2.0;
+      if (dist) changed = true;
+      mCameraTrans[axis] += dist;
+   }
+   dist = (mCameraZoomTarget - mCameraZoom) / 2.0;
+   if (dist) changed = true;
+   mCameraZoom += dist;
+
+   return changed;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void VisualizerView::paintGL()
 {
+   updateCamera();
+
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    glLoadIdentity();
-   glTranslatef(0.0, 0.0, -50.0);
-   glRotatef(mRotX / 16.0, 1.0, 0.0, 0.0);
-   glRotatef(mRotY / 16.0, 0.0, 1.0, 0.0);
-   glRotatef(mRotZ / 16.0, 0.0, 0.0, 1.0);
+   glTranslatef(0.0, 0.0, mCameraZoom);
+
+   glPushMatrix();
+
+   // Apply camera rotation.
+   glRotatef(mCameraRot[X], 1.0, 0.0, 0.0);
+   glRotatef(mCameraRot[Y], 0.0, 1.0, 0.0);
+   glRotatef(mCameraRot[Z], 0.0, 0.0, 1.0);
+
+   // Apply camera translation.
+   glTranslatef(-mCameraTrans[X], -mCameraTrans[Y], -mCameraTrans[Z]);
 
    int objectCount = (int)mObjectList.size();
    for (int objectIndex = 0; objectIndex < objectCount; ++objectIndex)
    {
       drawObject(mObjectList[objectIndex]);
    }
+   glPopMatrix();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void VisualizerView::resizeGL(int width, int height)
 {
-   int side = qMin(width, height);
-   glViewport((width - side) / 2, (height - side) / 2, side, side);
+   glViewport(0, 0, width, height);
 
    glMatrixMode(GL_PROJECTION);
    glLoadIdentity();
    //glOrtho(-0.5, +0.5, -0.5, +0.5, 4.0, 15.0);
-   gluPerspective(45.0f, width/height, 0.1f, 10000.0f);
+   gluPerspective(45.0f, width/(double)height, 0.1f, 10000.0f);
    glMatrixMode(GL_MODELVIEW);
 }
 
@@ -227,12 +312,31 @@ void VisualizerView::mouseMoveEvent(QMouseEvent *event)
    int dx = event->x() - mLastPos.x();
    int dy = event->y() - mLastPos.y();
 
-   if (event->buttons() & (Qt::LeftButton | Qt::RightButton))
+   if (event->buttons() & Qt::LeftButton)
    {
-      setXRotation(mRotX + 8 * dy);
-      setZRotation(mRotZ + 8 * dx);
+      QMatrix4x4 mat;
+      mat.rotate(mCameraRotTarget[Z], 0.0, 0.0, 1.0);
+      QVector3D pos;
+      pos.setX(0.1 * -dx);
+      pos.setY(0.1 * dy);
+
+      pos = pos * mat;
+
+      setXTranslation(mCameraTransTarget[X] + pos.x());
+      setYTranslation(mCameraTransTarget[Y] + pos.y());
+   }
+   if (event->buttons() & Qt::RightButton)
+   {
+      setZRotation(mCameraRotTarget[Z] + dx);
+      setXRotation(mCameraRotTarget[X] + dy);
    }
    mLastPos = event->pos();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void VisualizerView::wheelEvent(QWheelEvent* event)
+{
+   setZoom(mCameraZoomTarget + (-mCameraZoomTarget * event->delta() * 0.001));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -245,9 +349,16 @@ void VisualizerView::drawObject(const VisualizerObjectData& object)
    const double* offset = object.object->getOffsetPos();
    glTranslated(offset[0], offset[1], offset[2]);
 
-   glColor4d(mExtruders[object.extruder].color.redF(),
-             mExtruders[object.extruder].color.greenF(),
-             mExtruders[object.extruder].color.blueF(),
+   int extruderIndex = object.object->getExtruder();
+   if (extruderIndex < 0 || extruderIndex >= (int)mPrefs.extruderList.size())
+   {
+      // Default to extruder index 0 if our desired index is out of bounds.
+      extruderIndex = 0;
+   }
+
+   glColor4d(mPrefs.extruderList[extruderIndex].color.redF(),
+             mPrefs.extruderList[extruderIndex].color.greenF(),
+             mPrefs.extruderList[extruderIndex].color.blueF(),
              1.0);
 
    glLineWidth(1.0f);
@@ -259,7 +370,7 @@ void VisualizerView::drawObject(const VisualizerObjectData& object)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void VisualizerView::visualize(VisualizerObjectData& data)
+void VisualizerView::generateGeometry(VisualizerObjectData& data)
 {
    if (!data.object)
    {

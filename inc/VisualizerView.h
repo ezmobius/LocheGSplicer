@@ -23,9 +23,9 @@
 
 #include <Constants.h>
 #include <QGLWidget>
+#include <QTimer>
 
 
-class QtLogo;
 class GCodeObject;
 struct ExtruderData;
 
@@ -35,16 +35,15 @@ class VisualizerView : public QGLWidget
    Q_OBJECT
 
 public:
-   VisualizerView(const std::vector<ExtruderData>& extruders);
+   VisualizerView(const PreferenceData& prefs);
    virtual ~VisualizerView();
 
    /**
     * Adds an object into the visualizer.
     *
     * @param[in]  object     The object.
-    * @param[in]  extruder   The extruder that this object will use.
     */
-   void addObject(GCodeObject* object, int extruder);
+   void addObject(GCodeObject* object);
    void removeObject(GCodeObject* object);
 
    void clearObjects();
@@ -53,21 +52,37 @@ public:
    QSize sizeHint() const;
 
 public slots:
-   void setXRotation(int angle);
-   void setYRotation(int angle);
-   void setZRotation(int angle);
+   void setXTranslation(double pos);
+   void setYTranslation(double pos);
+   void setZTranslation(double pos);
+
+   void setXRotation(double angle);
+   void setYRotation(double angle);
+   void setZRotation(double angle);
+
+   void setZoom(double zoom);
+
+   void updateTick();
 
 signals:
-   void xRotationChanged(int angle);
-   void yRotationChanged(int angle);
-   void zRotationChanged(int angle);
+   void xTranslationChanged(double pos);
+   void yTranslationChanged(double pos);
+   void zTranslationChanged(double pos);
+
+   void xRotationChanged(double angle);
+   void yRotationChanged(double angle);
+   void zRotationChanged(double angle);
+
+   void zoomChanged(double zoom);
 
 protected:
    void initializeGL();
+   bool updateCamera();
    void paintGL();
    void resizeGL(int width, int height);
    void mousePressEvent(QMouseEvent *event);
    void mouseMoveEvent(QMouseEvent *event);
+   void wheelEvent(QWheelEvent* event);
 
    void drawObject(const VisualizerObjectData& object);
 
@@ -76,16 +91,21 @@ private:
    /**
     * Generate geometry data for the given object.
     */
-   void visualize(VisualizerObjectData& data);
+   void generateGeometry(VisualizerObjectData& data);
 
-   int mRotX;
-   int mRotY;
-   int mRotZ;
+   double mCameraRot[AXIS_NUM_NO_E];
+   double mCameraTrans[AXIS_NUM_NO_E];
+   double mCameraZoom;
+
+   double mCameraRotTarget[AXIS_NUM_NO_E];
+   double mCameraTransTarget[AXIS_NUM_NO_E];
+   double mCameraZoomTarget;
    QPoint mLastPos;
 
-   const std::vector<ExtruderData>& mExtruders;
+   QTimer* mUpdateTimer;
+
+   const PreferenceData& mPrefs;
    
-   QColor mBackgroundColor;
    std::vector<VisualizerObjectData> mObjectList;
 };
 
