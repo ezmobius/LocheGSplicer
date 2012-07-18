@@ -21,14 +21,15 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
+#include <Constants.h>
 #include <QWidget>
-
 
 QT_BEGIN_NAMESPACE
 class QSlider;
 QT_END_NAMESPACE
 class VisualizerView;
 class GCodeObject;
+
 
 class Window : public QWidget
 {
@@ -44,6 +45,9 @@ private:
    //QSlider *createSliderWidget();
 
    VisualizerView *mVisualizerView;
+
+   bool mIncludeComments;
+   std::vector<ExtruderData> mExtruders;
 
    // TEMP
    GCodeObject* mTestObject1;

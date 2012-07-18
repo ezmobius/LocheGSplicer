@@ -18,17 +18,24 @@
  */
 
 
-#include <QtGui>
-
 #include <VisualizerView.h>
 #include <GCodeObject.h>
 #include <Window.h>
 
+#include <QtGui>
+
 
 ////////////////////////////////////////////////////////////////////////////////
 Window::Window()
+   : mIncludeComments(true)
+   , mTestObject1(NULL)
+   , mTestObject2(NULL)
 {
-   mVisualizerView = new VisualizerView();
+   // Initialize our default extruder data.
+   mExtruders.push_back(ExtruderData(Qt::green));
+   mExtruders.push_back(ExtruderData(Qt::blue, 23.5));
+
+   mVisualizerView = new VisualizerView(mExtruders);
 
    //mXSlider = createSliderWidget();
    //mYSlider = createSliderWidget();

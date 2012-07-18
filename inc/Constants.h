@@ -20,7 +20,9 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#include <QColor>
 #include <QString>
+
 
 class GCodeObject;
 
@@ -28,19 +30,19 @@ class GCodeObject;
 /**
  * Some commonly used indexed type definitions.
  */
-#define X 0
-#define Y 1
-#define Z 2
-#define E 3
-#define AXIS_NUM 4
-#define AXIS_NUM_NO_E 3
+const static int X = 0;
+const static int Y = 1;
+const static int Z = 2;
+const static int E = 3;
+const static int AXIS_NUM = 4;
+const static int AXIS_NUM_NO_E = 3;
 
 const static char AXIS_NAME[AXIS_NUM] = {'X', 'Y', 'Z', 'E'};
 
 /**
  * Various conversion multipliers.
  */
-#define INCHES_TO_MM 25.4
+const static double INCHES_TO_MM = 25.4;
 
 /**
  * GCode G and M Type definitions.
@@ -167,6 +169,34 @@ struct GCodeCommand
    double f;
    double s;
    double p;
+};
+
+struct ExtruderData
+{
+   ExtruderData()
+   {
+      for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
+      {
+         offset[axis] = 0.0;
+      }
+
+      flow = 1.0;
+      color = Qt::white;
+   }
+
+   ExtruderData(QColor col, double xOffset = 0.0, double yOffset = 0.0, double zOffset = 0.0, double flowRate = 1.0)
+   {
+      offset[X] = xOffset;
+      offset[Y] = yOffset;
+      offset[Z] = zOffset;
+
+      flow = flowRate;
+      color = col;
+   }
+
+   double offset[AXIS_NUM_NO_E];
+   double flow;
+   QColor color;
 };
 
 struct VisualizerObjectData

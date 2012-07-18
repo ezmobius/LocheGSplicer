@@ -21,12 +21,11 @@
 #include <QtGui>
 #include <QtOpenGL>
 
-#include <math.h>
-#include <assert.h>
-
 #include <VisualizerView.h>
 #include <GCodeObject.h>
-#include <qtlogo.h>
+
+#include <math.h>
+#include <assert.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 #ifndef GL_MULTISAMPLE
@@ -34,21 +33,16 @@
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
-VisualizerView::VisualizerView(QWidget *parent)
-   : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
+VisualizerView::VisualizerView(const std::vector<ExtruderData>& extruders)
+   : QGLWidget(QGLFormat(QGL::SampleBuffers), NULL)
+   , mExtruders(extruders)
 {
-   //mLogo = 0;
    mRotX = 0;
    mRotY = 0;
    mRotZ = 0;
 
    // TODO: Add preference to set background and extruder colors.
    mBackgroundColor = QColor::fromCmykF(0.39, 0.39, 0.0, 0.0);
-
-   mExtruderColors.push_back(Qt::red);
-   mExtruderColors.push_back(Qt::green);
-   mExtruderColors.push_back(Qt::blue);
-   mExtruderColors.push_back(Qt::yellow);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -183,18 +177,11 @@ void VisualizerView::initializeGL()
 {
    qglClearColor(mBackgroundColor.dark());
 
-   //mLogo = new QtLogo(this, 64);
-   //mLogo->setColor(Qt::darkGreen);
-
    glEnable(GL_DEPTH_TEST);
    glEnable(GL_CULL_FACE);
    glShadeModel(GL_SMOOTH);
-   //glEnable(GL_LIGHTING);
-   //glEnable(GL_LIGHT0);
    glEnable(GL_MULTISAMPLE);
    glEnable(GL_COLOR_MATERIAL);
-   //static GLfloat lightPosition[4] = { 0.5, 5.0, 7.0, 1.0 };
-   //glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 }
 
@@ -208,7 +195,6 @@ void VisualizerView::paintGL()
    glRotatef(mRotY / 16.0, 0.0, 1.0, 0.0);
    glRotatef(mRotZ / 16.0, 0.0, 0.0, 1.0);
 
-   //mLogo->draw();
    int objectCount = (int)mObjectList.size();
    for (int objectIndex = 0; objectIndex < objectCount; ++objectIndex)
    {
@@ -259,9 +245,9 @@ void VisualizerView::drawObject(const VisualizerObjectData& object)
    const double* offset = object.object->getOffsetPos();
    glTranslated(offset[0], offset[1], offset[2]);
 
-   glColor4d(mExtruderColors[object.extruder].redF(),
-             mExtruderColors[object.extruder].greenF(),
-             mExtruderColors[object.extruder].blueF(),
+   glColor4d(mExtruders[object.extruder].color.redF(),
+             mExtruders[object.extruder].color.greenF(),
+             mExtruders[object.extruder].color.blueF(),
              1.0);
 
    glLineWidth(1.0f);

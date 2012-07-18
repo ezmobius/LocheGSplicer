@@ -21,10 +21,9 @@
 #ifndef G_CODE_OBJECT_H
 #define G_CODE_OBJECT_H
 
+#include <Constants.h>
 #include <QString>
 #include <vector>
-
-#include <Constants.h>
 
 
 class GCodeObject

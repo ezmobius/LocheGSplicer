@@ -21,20 +21,21 @@
 #ifndef VISUALIZER_VIEW_H
 #define VISUALIZER_VIEW_H
 
-#include <QGLWidget>
-
 #include <Constants.h>
+#include <QGLWidget>
 
 
 class QtLogo;
 class GCodeObject;
+struct ExtruderData;
+
 
 class VisualizerView : public QGLWidget
 {
    Q_OBJECT
 
 public:
-   VisualizerView(QWidget *parent = 0);
+   VisualizerView(const std::vector<ExtruderData>& extruders);
    virtual ~VisualizerView();
 
    /**
@@ -77,14 +78,14 @@ private:
     */
    void visualize(VisualizerObjectData& data);
 
-   //QtLogo *mLogo;
    int mRotX;
    int mRotY;
    int mRotZ;
    QPoint mLastPos;
+
+   const std::vector<ExtruderData>& mExtruders;
    
    QColor mBackgroundColor;
-   std::vector<QColor> mExtruderColors;
    std::vector<VisualizerObjectData> mObjectList;
 };
 
