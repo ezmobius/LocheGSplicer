@@ -23,67 +23,15 @@
 #include <Window.h>
 
 #include <QtGui>
+#include <QVariant>
 
 
 ////////////////////////////////////////////////////////////////////////////////
 Window::Window()
 {
-   mVisualizerView = new VisualizerView(mPrefs);
-
-   //mXSlider = createSliderWidget();
-   //mYSlider = createSliderWidget();
-   //mZSlider = createSliderWidget();
-
-   //connect(mXSlider, SIGNAL(valueChanged(int)), mVisualizerView, SLOT(setXRotation(int)));
-   //connect(mVisualizerView, SIGNAL(xRotationChanged(int)), mXSlider, SLOT(setValue(int)));
-   //connect(mYSlider, SIGNAL(valueChanged(int)), mVisualizerView, SLOT(setYRotation(int)));
-   //connect(mVisualizerView, SIGNAL(yRotationChanged(int)), mYSlider, SLOT(setValue(int)));
-   //connect(mZSlider, SIGNAL(valueChanged(int)), mVisualizerView, SLOT(setZRotation(int)));
-   //connect(mVisualizerView, SIGNAL(zRotationChanged(int)), mZSlider, SLOT(setValue(int)));
-
-   QHBoxLayout *mainLayout = new QHBoxLayout;
-   mainLayout->addWidget(mVisualizerView);
-   //mainLayout->addWidget(mXSlider);
-   //mainLayout->addWidget(mYSlider);
-   //mainLayout->addWidget(mZSlider);
-   setLayout(mainLayout);
-
-   //mXSlider->setValue(15 * 16);
-   //mYSlider->setValue(345 * 16);
-   //mZSlider->setValue(0 * 16);
-   setWindowTitle(tr("LocheGSplicer"));
-
-   // TEMP
-   GCodeObject* object1 = new GCodeObject(mPrefs);
-   GCodeObject* object2 = new GCodeObject(mPrefs);
-   object1->loadFile("../data/ColorBase.gcode");
-   object2->loadFile("../data/ColorPatern.gcode");
-   object2->setExtruder(1);
-
-   mVisualizerView->addObject(object1);
-   mVisualizerView->addObject(object2);
-
-   //object1->setOffsetPos(-18.0, -18.0, 0.0);
-   //object2->setOffsetPos(-16.0, -16.0, 0.0);
-   //object1->setOffsetPos(0.0, -16.0, 0.0);
-   //object2->setOffsetPos(-26.0, -16.0, 0.0);
-   //object2->setOffsetPos(object2->getOffsetPos()[X] - 2.0, object2->getOffsetPos()[Y] - 2.0, 0.0);
-
-   mObjectList.push_back(object1);
-   mObjectList.push_back(object2);
+   setupUI();
+   setupConnections();
 }
-
-//////////////////////////////////////////////////////////////////////////////////
-//QSlider *Window::createSliderWidget()
-//{
-//   QSlider *slider = new QSlider(Qt::Vertical);
-//   slider->setRange(0, 360 * 16);
-//   slider->setSingleStep(16);
-//   slider->setPageStep(15 * 16);
-//   slider->setTickInterval(15 * 16);
-//   slider->setTickPosition(QSlider::TicksRight);
-//   return slider;
-//}
 
 ////////////////////////////////////////////////////////////////////////////////
 void Window::keyPressEvent(QKeyEvent *e)
@@ -92,6 +40,165 @@ void Window::keyPressEvent(QKeyEvent *e)
       close();
    else
       QWidget::keyPressEvent(e);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void Window::onAddPressed()
+{
+   // Check for any previously used directories.
+   QSettings settings(COMPANY_NAME, APPLICATION_NAME);
+   QString lastDir = settings.value(LAST_IMPORT_FOLDER, "data").toString();
+
+   QFileDialog dlg;
+   QString fileName = dlg.getOpenFileName(this, "Open GCode File", lastDir, "GCODE (*.gcode);; All Files (*.*)");
+   if (!fileName.isEmpty())
+   {
+      QFileInfo fileInfo = fileName;
+
+      // Remember this directory.
+      lastDir = fileInfo.absolutePath();
+      settings.setValue(LAST_IMPORT_FOLDER, lastDir);
+
+      // Attempt to load our given file.
+      GCodeObject* newObject = new GCodeObject(mPrefs);
+      
+      if (!newObject->loadFile(fileName))
+      {
+         // Failed to load the file.
+         QMessageBox::critical(this, "Failed to load gcode file!", "There was a problem loading the specified file.  Please ensure the file is of the correct type (gcode) and that it does not already contain multiple extruder swaps.", QMessageBox::Ok, QMessageBox::NoButton);
+         delete newObject;
+         return;
+      }
+
+      mVisualizerView->addObject(newObject);
+      mObjectList.push_back(newObject);
+
+      int rowIndex = mObjectListWidget->rowCount();
+      mObjectListWidget->insertRow(rowIndex);
+
+      QTableWidgetItem* fileItem = new QTableWidgetItem(fileInfo.fileName());
+      fileItem->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+
+      QSpinBox* extruderSpin = new QSpinBox();
+      extruderSpin->setMinimum(0);
+      extruderSpin->setMaximum((int)mPrefs.extruderList.size() - 1);
+      connect(extruderSpin, SIGNAL(valueChanged(int)), this, SLOT(onExtruderIndexChanged(int)));
+
+      mObjectListWidget->setItem(rowIndex, 0, fileItem);
+      mObjectListWidget->setCellWidget(rowIndex, 1, extruderSpin);
+      mObjectListWidget->resizeColumnsToContents();
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void Window::onRemovePressed()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void Window::onBuildPressed()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void Window::onExtruderIndexChanged(int index)
+{
+   QSpinBox* extruderSpin = dynamic_cast<QSpinBox*>(sender());
+   if (extruderSpin)
+   {
+      // Find the object index that is changing.
+      int rowCount = mObjectListWidget->rowCount();
+      for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex)
+      {
+         if (mObjectListWidget->cellWidget(rowIndex, 1) == extruderSpin)
+         {
+            mObjectList[rowIndex]->setExtruder(extruderSpin->value());
+            mVisualizerView->updateGL();
+         }
+      }
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void Window::setupUI()
+{
+   setWindowTitle(tr("LocheGSplicer"));
+
+   QHBoxLayout* mainLayout = new QHBoxLayout();
+   mainLayout->setMargin(0);
+
+   mMainSplitter = new QSplitter(Qt::Horizontal);
+   mainLayout->addWidget(mMainSplitter);
+
+   ////////////////////////////////////////////////////////////////////////////////
+   // Main visualizer window goes on the left side.
+   mVisualizerView = new VisualizerView(mPrefs);
+   mMainSplitter->addWidget(mVisualizerView);
+
+   ////////////////////////////////////////////////////////////////////////////////
+   // GCode list and other plating properties go on the right side.
+   QWidget* rightWidget = new QWidget();
+   mMainSplitter->addWidget(rightWidget);
+   QVBoxLayout* rightLayout = new QVBoxLayout();
+   rightWidget->setLayout(rightLayout);
+
+   QGroupBox* objectGroup = new QGroupBox("Objects");
+   rightLayout->addWidget(objectGroup);
+
+   QVBoxLayout* objectLayout = new QVBoxLayout();
+   objectGroup->setLayout(objectLayout);
+
+   // Object list box.
+   mObjectListWidget = new QTableWidget(0, 2);
+   objectLayout->addWidget(mObjectListWidget);
+   
+   QStringList headers;
+   headers.push_back("File");
+   headers.push_back("Extruder #");
+   mObjectListWidget->setHorizontalHeaderLabels(headers);
+   mObjectListWidget->setColumnWidth(0, 200);
+
+   // Import and remove buttons for the object list.
+   QHBoxLayout* buttonLayout = new QHBoxLayout();
+   objectLayout->addLayout(buttonLayout);
+   mAddFileButton = new QPushButton("Import");
+   mRemoveFileButton = new QPushButton("Remove");
+   buttonLayout->addWidget(mAddFileButton);
+   buttonLayout->addWidget(mRemoveFileButton);
+
+   // Below the object list are the plating controls for
+   // positioning each gcode file offset.
+   QGroupBox* platerGroup = new QGroupBox("Plater");
+   rightLayout->addWidget(platerGroup);
+
+   QVBoxLayout* platerLayout = new QVBoxLayout();
+   platerGroup->setLayout(platerLayout);
+
+   // TODO: Add plater controls.
+
+   // Below the plater controls are the final builder controls.
+   QGroupBox* buildGroup = new QGroupBox("Build");
+   rightLayout->addWidget(buildGroup);
+
+   QHBoxLayout* buildLayout = new QHBoxLayout();
+   buildGroup->setLayout(buildLayout);
+
+   mBuildButton = new QPushButton("Build");
+   buildLayout->addWidget(mBuildButton);
+
+   QList<int> sizes;
+   sizes.push_back((width() / 3) * 2);
+   sizes.push_back(width() / 3);
+   mMainSplitter->setSizes(sizes);
+   setLayout(mainLayout);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void Window::setupConnections()
+{
+   connect(mAddFileButton,    SIGNAL(pressed()), this, SLOT(onAddPressed()));
+   connect(mRemoveFileButton, SIGNAL(pressed()), this, SLOT(onRemovePressed()));
+   connect(mBuildButton,      SIGNAL(pressed()), this, SLOT(onBuildPressed()));
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -29,6 +29,15 @@
 class GCodeObject;
 
 
+const static QString COMPANY_NAME = "Lochemage";
+const static QString APPLICATION_NAME = "LocheGSplicer";
+
+/**
+ * Settings Key names.
+ */
+const static QString LAST_IMPORT_FOLDER = "LastImportFolder";
+const static QString LAST_EXPORT_FOLDER = "LastExportFolder";
+
 /**
  * Some commonly used indexed type definitions.
  */

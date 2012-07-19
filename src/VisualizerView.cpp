@@ -75,6 +75,8 @@ void VisualizerView::addObject(GCodeObject* object)
    generateGeometry(data);
 
    mObjectList.push_back(data);
+
+   updateGL();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

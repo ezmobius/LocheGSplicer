@@ -25,8 +25,12 @@
 #include <QWidget>
 
 QT_BEGIN_NAMESPACE
-class QSlider;
+class QListView;
+class QSplitter;
+class QPushButton;
+class QTableWidget;
 QT_END_NAMESPACE
+
 class VisualizerView;
 class GCodeObject;
 
@@ -41,12 +45,28 @@ public:
 protected:
    void keyPressEvent(QKeyEvent *event);
 
+public slots:
+   void onAddPressed();
+   void onRemovePressed();
+   void onBuildPressed();
+
+   /**
+    * Event handler when the extruder index has changed on an object item.
+    */
+   void onExtruderIndexChanged(int index);
+
 private:
-   //QSlider *createSliderWidget();
+   void setupUI();
+   void setupConnections();
+   
+   PreferenceData    mPrefs;
 
-   PreferenceData mPrefs;
-
-   VisualizerView *mVisualizerView;
+   QSplitter*        mMainSplitter;
+   VisualizerView*   mVisualizerView;
+   QTableWidget*     mObjectListWidget;
+   QPushButton*      mAddFileButton;
+   QPushButton*      mRemoveFileButton;
+   QPushButton*      mBuildButton;
 
    std::vector<GCodeObject*> mObjectList;
 };
