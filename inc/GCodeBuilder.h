@@ -18,57 +18,43 @@
  */
 
 
-#ifndef WINDOW_H
-#define WINDOW_H
+#ifndef G_CODE_BUILDER_H
+#define G_CODE_BUILDER_H
 
 #include <Constants.h>
-#include <QWidget>
-
-QT_BEGIN_NAMESPACE
-class QListView;
-class QSplitter;
-class QPushButton;
-class QTableWidget;
-QT_END_NAMESPACE
-
-class VisualizerView;
-class GCodeObject;
+#include <QString>
+#include <vector>
 
 
-class Window : public QWidget
+class GCodeBuilder
 {
-   Q_OBJECT
-
 public:
-   Window();
-
-protected:
-   void keyPressEvent(QKeyEvent *event);
-
-public slots:
-   void onAddPressed();
-   void onRemovePressed();
-   void onBuildPressed();
+   GCodeBuilder(const PreferenceData& prefs);
+   virtual ~GCodeBuilder();
 
    /**
-    * Event handler when the extruder index has changed on an object item.
+    *	Sets the list of objects.
     */
-   void onExtruderIndexChanged(int index);
+   void setObjectList(const std::vector<GCodeObject*>& objectList);
+
+   /**
+    *	Builds the final gcode file and outputs it to a file.
+    *
+    * @param[in]  fileName  The name of the file to save.
+    */
+   bool build(const QString& fileName);
+
+   const QString& getError() const;
+
+protected:
 
 private:
-   void setupUI();
-   void setupConnections();
-   
-   PreferenceData    mPrefs;
 
-   QSplitter*        mMainSplitter;
-   VisualizerView*   mVisualizerView;
-   QTableWidget*     mObjectListWidget;
-   QPushButton*      mAddFileButton;
-   QPushButton*      mRemoveFileButton;
-   QPushButton*      mBuildButton;
+   const PreferenceData& mPrefs;
 
    std::vector<GCodeObject*> mObjectList;
+
+   QString mError;
 };
 
-#endif // WINDOW_H
+#endif // G_CODE_BUILDER_H

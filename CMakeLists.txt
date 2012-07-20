@@ -73,18 +73,20 @@ MAKE_DIRECTORY(${OUTPUT_LIBDIR})
 # Project files
 SET(HEADER_FILES
    ${HEADER_PATH}/Constants.h
+   ${HEADER_PATH}/GCodeBuilder.h
    ${HEADER_PATH}/GCodeObject.h
    ${HEADER_PATH}/GCodeParser.h
+   ${HEADER_PATH}/MainWindow.h
    ${HEADER_PATH}/VisualizerView.h
-   ${HEADER_PATH}/Window.h
 )
 
 SET(SOURCE_FILES
+   ${SOURCE_PATH}/GCodeBuilder.cpp
    ${SOURCE_PATH}/GCodeObject.cpp
    ${SOURCE_PATH}/GCodeParser.cpp
    ${SOURCE_PATH}/Main.cpp
+   ${SOURCE_PATH}/MainWindow.cpp
    ${SOURCE_PATH}/VisualizerView.cpp
-   ${SOURCE_PATH}/Window.cpp
 )
 
 QT4_WRAP_CPP(MOC_SOURCES ${HEADER_FILES})

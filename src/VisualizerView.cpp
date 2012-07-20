@@ -45,13 +45,18 @@ VisualizerView::VisualizerView(const PreferenceData& prefs)
       mCameraTransTarget[axis] = 0.0;
    }
 
-   mCameraZoom = -50.0f;
-   mCameraZoomTarget = -50.0f;
+   mCameraZoom = -50.0;
+   mCameraZoomTarget = -50.0;
 
    mCameraTrans[X] = mPrefs.platformWidth / 2.0;
    mCameraTrans[Y] = mPrefs.platformHeight / 2.0;
    mCameraTransTarget[X] = mCameraTrans[X];
    mCameraTransTarget[Y] = mCameraTrans[Y];
+
+   mCameraRot[X] = -45.0;
+   mCameraRotTarget[X] = mCameraRot[X];
+   mCameraRot[Z] = 25.0;
+   mCameraRotTarget[Z] = mCameraRot[Z];
 
    mUpdateTimer = new QTimer(this);
    connect(mUpdateTimer, SIGNAL(timeout()), this, SLOT(updateTick()));
@@ -62,6 +67,8 @@ VisualizerView::VisualizerView(const PreferenceData& prefs)
 VisualizerView::~VisualizerView()
 {
    clearObjects();
+   mUpdateTimer->stop();
+   delete mUpdateTimer;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

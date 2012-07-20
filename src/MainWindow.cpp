@@ -20,21 +20,22 @@
 
 #include <VisualizerView.h>
 #include <GCodeObject.h>
-#include <Window.h>
+#include <GCodeBuilder.h>
+#include <MainWindow.h>
 
 #include <QtGui>
 #include <QVariant>
 
 
 ////////////////////////////////////////////////////////////////////////////////
-Window::Window()
+MainWindow::MainWindow()
 {
    setupUI();
    setupConnections();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void Window::keyPressEvent(QKeyEvent *e)
+void MainWindow::keyPressEvent(QKeyEvent *e)
 {
    if (e->key() == Qt::Key_Escape)
       close();
@@ -43,11 +44,11 @@ void Window::keyPressEvent(QKeyEvent *e)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void Window::onAddPressed()
+void MainWindow::onAddPressed()
 {
    // Check for any previously used directories.
    QSettings settings(COMPANY_NAME, APPLICATION_NAME);
-   QString lastDir = settings.value(LAST_IMPORT_FOLDER, "data").toString();
+   QString lastDir = settings.value(LAST_IMPORT_FOLDER, "").toString();
 
    QFileDialog dlg;
    QString fileName = dlg.getOpenFileName(this, "Open GCode File", lastDir, "GCODE (*.gcode);; All Files (*.*)");
@@ -65,7 +66,8 @@ void Window::onAddPressed()
       if (!newObject->loadFile(fileName))
       {
          // Failed to load the file.
-         QMessageBox::critical(this, "Failed to load gcode file!", "There was a problem loading the specified file.  Please ensure the file is of the correct type (gcode) and that it does not already contain multiple extruder swaps.", QMessageBox::Ok, QMessageBox::NoButton);
+         QString errorStr = "Failed to load file \'" + fileName + "\' with error: " + newObject->getError();
+         QMessageBox::critical(this, "Failure!", errorStr, QMessageBox::Ok, QMessageBox::NoButton);
          delete newObject;
          return;
       }
@@ -113,7 +115,7 @@ void Window::onAddPressed()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void Window::onRemovePressed()
+void MainWindow::onRemovePressed()
 {
    int rowCount = (int)mObjectListWidget->rowCount();
    for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex)
@@ -138,12 +140,40 @@ void Window::onRemovePressed()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void Window::onBuildPressed()
+void MainWindow::onBuildPressed()
 {
+   QSettings settings(COMPANY_NAME, APPLICATION_NAME);
+   QString lastDir = settings.value(LAST_EXPORT_FOLDER, "").toString();
+   lastDir += "\\Spliced";
+
+   QFileDialog dlg;
+   QString fileName = dlg.getSaveFileName(this, "Export GCode File", lastDir, "GCODE (*.gcode);; All Files (*.*)");
+   if (!fileName.isEmpty())
+   {
+      QFileInfo fileInfo = fileName;
+
+      // Remember this directory.
+      lastDir = fileInfo.absolutePath();
+      settings.setValue(LAST_EXPORT_FOLDER, lastDir);
+
+      GCodeBuilder builder(mPrefs);
+      builder.setObjectList(mObjectList);
+
+      if (!builder.build(fileName))
+      {
+         // Failed to load the file.
+         QString errorStr = "Failed to splice file \'" + fileName + "\' with error: " + builder.getError();
+         QMessageBox::critical(this, "Failure!", errorStr, QMessageBox::Ok, QMessageBox::NoButton);
+      }
+      else
+      {
+         QMessageBox::information(this, "Success!", "GCode spliced and exported!", QMessageBox::Ok);
+      }
+   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void Window::onExtruderIndexChanged(int index)
+void MainWindow::onExtruderIndexChanged(int index)
 {
    QSpinBox* extruderSpin = dynamic_cast<QSpinBox*>(sender());
    if (extruderSpin)
@@ -162,7 +192,7 @@ void Window::onExtruderIndexChanged(int index)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void Window::setupUI()
+void MainWindow::setupUI()
 {
    setWindowTitle(tr("LocheGSplicer"));
 
@@ -220,13 +250,13 @@ void Window::setupUI()
    // TODO: Add plater controls.
 
    // Below the plater controls are the final builder controls.
-   QGroupBox* buildGroup = new QGroupBox("Build");
+   QGroupBox* buildGroup = new QGroupBox("Splice");
    rightLayout->addWidget(buildGroup);
 
    QHBoxLayout* buildLayout = new QHBoxLayout();
    buildGroup->setLayout(buildLayout);
 
-   mBuildButton = new QPushButton("Build");
+   mBuildButton = new QPushButton("Splice");
    buildLayout->addWidget(mBuildButton);
 
    QList<int> sizes;
@@ -237,7 +267,7 @@ void Window::setupUI()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void Window::setupConnections()
+void MainWindow::setupConnections()
 {
    connect(mAddFileButton,    SIGNAL(pressed()), this, SLOT(onAddPressed()));
    connect(mRemoveFileButton, SIGNAL(pressed()), this, SLOT(onRemovePressed()));

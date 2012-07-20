@@ -50,6 +50,8 @@ public:
    int getLevelCount() const;
    const std::vector<GCodeCommand>& getLevel(int levelIndex);
 
+   const QString& getError() const;
+
 protected:
 
 private:
@@ -65,6 +67,8 @@ private:
 
    double mOffsetPos[AXIS_NUM_NO_E];
    int    mExtruderIndex;
+
+   QString mError;
 };
 
 #endif // G_CODE_OBJECT_H

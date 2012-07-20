@@ -17,23 +17,39 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include <QApplication>
-#include <QDesktopWidget>
 
-#include <MainWindow.h>
+#include <GCodeBuilder.h>
+#include <GCodeParser.h>
+
 
 ////////////////////////////////////////////////////////////////////////////////
-int main(int argc, char *argv[])
+GCodeBuilder::GCodeBuilder(const PreferenceData& prefs)
+   : mPrefs(prefs)
 {
-   QApplication app(argc, argv);
-   MainWindow window;
-   window.resize(800, 600);
-   int desktopArea = QApplication::desktop()->width() *
-                     QApplication::desktop()->height();
-   int widgetArea = window.width() * window.height();
-   if (((float)widgetArea / (float)desktopArea) < 0.75f)
-      window.show();
-   else
-      window.showMaximized();
-   return app.exec();
 }
+
+////////////////////////////////////////////////////////////////////////////////
+GCodeBuilder::~GCodeBuilder()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void GCodeBuilder::setObjectList(const std::vector<GCodeObject*>& objectList)
+{
+   mObjectList = objectList;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool GCodeBuilder::build(const QString& fileName)
+{
+   mError = "Not implemented yet.";
+   return false;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const QString& GCodeBuilder::getError() const
+{
+   return mError;
+}
+
+////////////////////////////////////////////////////////////////////////////////

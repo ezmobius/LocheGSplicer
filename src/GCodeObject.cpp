@@ -47,13 +47,13 @@ bool GCodeObject::loadFile(const QString &fileName)
 
    if (!parser.loadFile(fileName))
    {
-      printf("Failed to load file \'%s\'", fileName.toStdString().c_str());
+      mError = "File not found.";
       return false;
    }
 
    std::vector<GCodeCommand> layer;
    GCodeCommand code;
-   
+
    double dValue = 0.0;
    long lValue = 0;
    double coordConversion = 1.0;
@@ -341,6 +341,7 @@ bool GCodeObject::loadFile(const QString &fileName)
             // We should not find any extruder change commands as we are assuming
             // all the gcode in any given file are for a single extruder.
             // We are unequipped to deal with this case so we must fail the load.
+            mError = "Import does not support gcode files that already contain extruder changes.";
             return false;
          }
       }
@@ -438,6 +439,12 @@ int GCodeObject::getLevelCount() const
 const std::vector<GCodeCommand>& GCodeObject::getLevel(int levelIndex)
 {
    return mData[levelIndex];
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const QString& GCodeObject::getError() const
+{
+   return mError;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
