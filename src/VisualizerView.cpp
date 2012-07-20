@@ -100,8 +100,11 @@ void VisualizerView::removeObject(GCodeObject* object)
          }
 
          mObjectList.erase(mObjectList.begin() + objectIndex);
+         break;
       }
    }
+
+   updateGL();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -118,6 +121,8 @@ void VisualizerView::clearObjects()
       }
    }
    mObjectList.clear();
+
+   updateGL();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -61,7 +61,7 @@ void Window::onAddPressed()
 
       // Attempt to load our given file.
       GCodeObject* newObject = new GCodeObject(mPrefs);
-      
+
       if (!newObject->loadFile(fileName))
       {
          // Failed to load the file.
@@ -70,6 +70,27 @@ void Window::onAddPressed()
          return;
       }
 
+      // First attempt to find the next extruder index to use.
+      int extruderIndex = 0;
+      int count = (int)mObjectList.size();
+      for (int index = 0; index < count; ++index)
+      {
+         GCodeObject* object = mObjectList[index];
+         if (object)
+         {
+            if (object->getExtruder() >= extruderIndex)
+            {
+               extruderIndex = object->getExtruder() + 1;
+            }
+         }
+      }
+
+      if (extruderIndex >= (int)mPrefs.extruderList.size())
+      {
+         extruderIndex = 0;
+      }
+
+      newObject->setExtruder(extruderIndex);
       mVisualizerView->addObject(newObject);
       mObjectList.push_back(newObject);
 
@@ -82,6 +103,7 @@ void Window::onAddPressed()
       QSpinBox* extruderSpin = new QSpinBox();
       extruderSpin->setMinimum(0);
       extruderSpin->setMaximum((int)mPrefs.extruderList.size() - 1);
+      extruderSpin->setValue(extruderIndex);
       connect(extruderSpin, SIGNAL(valueChanged(int)), this, SLOT(onExtruderIndexChanged(int)));
 
       mObjectListWidget->setItem(rowIndex, 0, fileItem);
@@ -93,6 +115,26 @@ void Window::onAddPressed()
 ////////////////////////////////////////////////////////////////////////////////
 void Window::onRemovePressed()
 {
+   int rowCount = (int)mObjectListWidget->rowCount();
+   for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex)
+   {
+      // Remove all items that are selected.
+      if (mObjectListWidget->isItemSelected(mObjectListWidget->item(rowIndex, 0)))
+      {
+         if (rowIndex >= (int)mObjectList.size())
+         {
+            break;
+         }
+
+         GCodeObject* object = mObjectList[rowIndex];
+         mObjectList.erase(mObjectList.begin() + rowIndex);
+         mVisualizerView->removeObject(object);
+         mObjectListWidget->removeRow(rowIndex);
+         delete object;
+         rowIndex--;
+         rowCount--;
+      }
+   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -150,8 +192,9 @@ void Window::setupUI()
 
    // Object list box.
    mObjectListWidget = new QTableWidget(0, 2);
+   mObjectListWidget->setSelectionMode(QAbstractItemView::MultiSelection);
    objectLayout->addWidget(mObjectListWidget);
-   
+
    QStringList headers;
    headers.push_back("File");
    headers.push_back("Extruder #");
