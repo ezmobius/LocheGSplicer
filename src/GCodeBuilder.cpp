@@ -98,9 +98,9 @@ bool GCodeBuilder::build(const QString& fileName)
          int levelCount = object->getLevelCount();
          for (int levelIndex = 0; levelIndex < levelCount; ++levelIndex)
          {
-            file.write("; *** Begin Layer ");
+            file.write("; ++++++++++++++++++++++++++++++++++++++ Begin Layer ");
             file.write(QString::number(levelIndex).toAscii());
-            file.write(" ***\n");
+            file.write(" ++++++++++++++++++++++++++++++++++++++\n");
 
             const std::vector<GCodeCommand>& layer = object->getLevel(levelIndex);
             int codeCount = (int)layer.size();

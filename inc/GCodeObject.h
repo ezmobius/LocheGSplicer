@@ -56,6 +56,8 @@ protected:
 
 private:
 
+   void finalizeTempBuffer(std::vector<GCodeCommand>& tempBuffer, std::vector<GCodeCommand>& finalBuffer);
+
    const PreferenceData& mPrefs;
 
    std::vector< std::vector<GCodeCommand> > mData;

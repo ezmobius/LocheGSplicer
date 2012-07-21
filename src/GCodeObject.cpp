@@ -53,7 +53,6 @@ bool GCodeObject::loadFile(const QString &fileName)
 
    std::vector<GCodeCommand> tempLayerBuffer;
    std::vector<GCodeCommand> layer;
-   bool finalizeTempLayer = false;
    GCodeCommand code;
 
    double dValue = 0.0;
@@ -119,9 +118,9 @@ bool GCodeObject::loadFile(const QString &fileName)
             // not be part of our header data.
             if (mData.empty())
             {
-               // Flag all our temp data to be moved into our
-               // layer and then changed to a new layer.
-               finalizeTempLayer = true;
+               // Move our temp code to our current layer code
+               // and iterate to our next layer.
+               finalizeTempBuffer(tempLayerBuffer, layer);
                changeLayers = true;
             }
 
@@ -130,17 +129,15 @@ bool GCodeObject::loadFile(const QString &fileName)
             if (lastE < currentPos[E])
             {
                lastE = currentPos[E];
-               finalizeTempLayer = true;
 
                if (lastZ < currentPos[Z])
                {
                   lastZ = currentPos[Z];
-
-                  // Unflag to move our temp data because
-                  // we want this temp data to be added
-                  // to the next layer instead.
-                  finalizeTempLayer = false;
                   changeLayers = true;
+               }
+               else
+               {
+                  finalizeTempBuffer(tempLayerBuffer, layer);
                }
 
                // Update the bounding volume.
@@ -371,36 +368,25 @@ bool GCodeObject::loadFile(const QString &fileName)
          continue;
       }
 
-      // Move any temp data to our current layer data.
-      if (finalizeTempLayer)
-      {
-         finalizeTempLayer = false;
-
-         if (!tempLayerBuffer.empty())
-         {
-            layer.insert(layer.end(), tempLayerBuffer.begin(), tempLayerBuffer.end());
-            tempLayerBuffer.clear();
-         }
-      }
-
       // If we have changed layers, put the current layer's data into the
       // layer stack and begin a new one.
       if (changeLayers)
       {
-         mData.push_back(layer);
-         layer.clear();
+         changeLayers = false;
+
+         if (!layer.empty())
+         {
+            mData.push_back(layer);
+            layer.clear();
+         }
       }
 
       // Add the current code value to the current layer.
       tempLayerBuffer.push_back(code);
    }
 
-   // Append our final temp data.
-   if (!tempLayerBuffer.empty())
-   {
-      layer.insert(layer.end(), tempLayerBuffer.begin(), tempLayerBuffer.end());
-      tempLayerBuffer.clear();
-   }
+   // Finalize any remaining temp codes.
+   finalizeTempBuffer(tempLayerBuffer, layer);
 
    // Add our final layer.
    if (!layer.empty())
@@ -482,6 +468,30 @@ const std::vector<GCodeCommand>& GCodeObject::getLevel(int levelIndex) const
 const QString& GCodeObject::getError() const
 {
    return mError;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void GCodeObject::finalizeTempBuffer(std::vector<GCodeCommand>& tempBuffer, std::vector<GCodeCommand>& finalBuffer)
+{
+   if (tempBuffer.empty())
+   {
+      return;
+   }
+
+   // All comments at the end are ignored.
+   int lastCommentIndex = (int)tempBuffer.size() - 1;
+   for (; lastCommentIndex >= 0; --lastCommentIndex)
+   {
+      GCodeCommand& code = tempBuffer[lastCommentIndex];
+      if (code.type == GCODE_COMMENT)
+      {
+         continue;
+      }
+      break;
+   }
+
+   finalBuffer.insert(finalBuffer.end(), tempBuffer.begin(), tempBuffer.begin() + lastCommentIndex + 1);
+   tempBuffer.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
