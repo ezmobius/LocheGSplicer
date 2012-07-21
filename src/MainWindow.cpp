@@ -157,7 +157,11 @@ void MainWindow::onBuildPressed()
       settings.setValue(LAST_EXPORT_FOLDER, lastDir);
 
       GCodeBuilder builder(mPrefs);
-      builder.setObjectList(mObjectList);
+      int count = (int)mObjectList.size();
+      for (int index = 0; index < count; ++index)
+      {
+         builder.addObject(mObjectList[index]);
+      }
 
       if (!builder.build(fileName))
       {

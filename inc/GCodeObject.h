@@ -48,7 +48,7 @@ public:
    int getExtruder() const;
 
    int getLevelCount() const;
-   const std::vector<GCodeCommand>& getLevel(int levelIndex);
+   const std::vector<GCodeCommand>& getLevel(int levelIndex) const;
 
    const QString& getError() const;
 

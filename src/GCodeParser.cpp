@@ -106,6 +106,9 @@ bool GCodeParser::parseNext()
 
    mToken = mToken.toUpper();
 
+   mToken.replace("\n", "");
+   mComment.replace("\n", "");
+
    mCodePos = -1;
 
    return true;

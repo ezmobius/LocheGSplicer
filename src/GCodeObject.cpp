@@ -51,7 +51,9 @@ bool GCodeObject::loadFile(const QString &fileName)
       return false;
    }
 
+   std::vector<GCodeCommand> tempLayerBuffer;
    std::vector<GCodeCommand> layer;
+   bool finalizeTempLayer = false;
    GCodeCommand code;
 
    double dValue = 0.0;
@@ -65,12 +67,12 @@ bool GCodeObject::loadFile(const QString &fileName)
    double offsetPos[AXIS_NUM] = {0.0,};
    double homeOffset[AXIS_NUM_NO_E] = {0.0,};
 
-   // Parse the gcode file, at the same time any codes we care about will have
-   // special treatment while any codes we don't care about will simply be preserved
-   // and included in the final product as is.
    double lastZ = currentPos[Z];
    double lastE = currentPos[E];
 
+   // Parse the gcode file, at the same time any codes we care about will have
+   // special treatment while any codes we don't care about will simply be preserved
+   // and included in the final product as is.
    while (parser.parseNext())
    {
       code.clear();
@@ -113,15 +115,31 @@ bool GCodeObject::loadFile(const QString &fileName)
                code.hasF = true;
             }
 
+            // Our first extruder move command should
+            // not be part of our header data.
+            if (mData.empty())
+            {
+               // Flag all our temp data to be moved into our
+               // layer and then changed to a new layer.
+               finalizeTempLayer = true;
+               changeLayers = true;
+            }
+
             // If we are extruding some material,
             // determine if the layer has changed.
             if (lastE < currentPos[E])
             {
                lastE = currentPos[E];
+               finalizeTempLayer = true;
 
                if (lastZ < currentPos[Z])
                {
                   lastZ = currentPos[Z];
+
+                  // Unflag to move our temp data because
+                  // we want this temp data to be added
+                  // to the next layer instead.
+                  finalizeTempLayer = false;
                   changeLayers = true;
                }
 
@@ -353,6 +371,18 @@ bool GCodeObject::loadFile(const QString &fileName)
          continue;
       }
 
+      // Move any temp data to our current layer data.
+      if (finalizeTempLayer)
+      {
+         finalizeTempLayer = false;
+
+         if (!tempLayerBuffer.empty())
+         {
+            layer.insert(layer.end(), tempLayerBuffer.begin(), tempLayerBuffer.end());
+            tempLayerBuffer.clear();
+         }
+      }
+
       // If we have changed layers, put the current layer's data into the
       // layer stack and begin a new one.
       if (changeLayers)
@@ -362,7 +392,14 @@ bool GCodeObject::loadFile(const QString &fileName)
       }
 
       // Add the current code value to the current layer.
-      layer.push_back(code);
+      tempLayerBuffer.push_back(code);
+   }
+
+   // Append our final temp data.
+   if (!tempLayerBuffer.empty())
+   {
+      layer.insert(layer.end(), tempLayerBuffer.begin(), tempLayerBuffer.end());
+      tempLayerBuffer.clear();
    }
 
    // Add our final layer.
@@ -436,7 +473,7 @@ int GCodeObject::getLevelCount() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const std::vector<GCodeCommand>& GCodeObject::getLevel(int levelIndex)
+const std::vector<GCodeCommand>& GCodeObject::getLevel(int levelIndex) const
 {
    return mData[levelIndex];
 }

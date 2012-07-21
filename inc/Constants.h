@@ -55,11 +55,15 @@ const static char AXIS_NAME[AXIS_NUM] = {'X', 'Y', 'Z', 'E'};
  */
 const static double INCHES_TO_MM = 25.4;
 
+const bool DEBUG_OUTPUT_LAYER_CODE = true;
+
 /**
  * GCode G and M Type definitions.
  */
 enum GCodeType
 {
+   GCODE_COMMENT                          = -1,    // Comment only.
+
    // Core G Codes
    GCODE_EXTRUDER_MOVEMENT0               = 1000,  // G0
    GCODE_EXTRUDER_MOVEMENT1               = 1001,  // G1
@@ -222,10 +226,14 @@ struct PreferenceData
 {
    PreferenceData()
    {
-      exportComments = true;
       extruderList.push_back(ExtruderData(Qt::green));
       extruderList.push_back(ExtruderData(Qt::blue, 23.5));
       backgroundColor = QColor::fromCmykF(0.39, 0.39, 0.0, 0.0).dark();
+
+      customPrefixCode.clear();
+      exportComments = true;
+      printSkirt = true;
+      skirtDistance = 2;
 
       platformWidth = 200;
       platformHeight = 200;
@@ -234,10 +242,17 @@ struct PreferenceData
       startInAbsoluteEMode = true;
    }
 
-   bool exportComments;
+   // Configuration properties.
    std::vector<ExtruderData> extruderList;
    QColor backgroundColor;
 
+   // Splicing properties.
+   QString customPrefixCode;
+   bool exportComments;
+   bool printSkirt;
+   int skirtDistance;
+
+   // Printer properties.
    int platformWidth;
    int platformHeight;
 

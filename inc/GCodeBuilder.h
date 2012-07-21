@@ -26,6 +26,8 @@
 #include <vector>
 
 
+class GCodeObject;
+
 class GCodeBuilder
 {
 public:
@@ -33,9 +35,9 @@ public:
    virtual ~GCodeBuilder();
 
    /**
-    *	Sets the list of objects.
+    * Inserts an object into the build list.
     */
-   void setObjectList(const std::vector<GCodeObject*>& objectList);
+   bool addObject(const GCodeObject* object);
 
    /**
     *	Builds the final gcode file and outputs it to a file.
@@ -52,7 +54,7 @@ private:
 
    const PreferenceData& mPrefs;
 
-   std::vector<GCodeObject*> mObjectList;
+   std::vector<const GCodeObject*> mObjectList;
 
    QString mError;
 };
