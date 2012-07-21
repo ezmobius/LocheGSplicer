@@ -266,6 +266,7 @@ void MainWindow::setupUI()
    // Object list box.
    mObjectListWidget = new QTableWidget(0, 2);
    mObjectListWidget->setSelectionMode(QAbstractItemView::MultiSelection);
+   mObjectListWidget->setToolTip("The list of currently imported gcode files to be spliced.");
    objectLayout->addWidget(mObjectListWidget);
 
    QStringList headers;
@@ -278,6 +279,8 @@ void MainWindow::setupUI()
    objectLayout->addLayout(buttonLayout);
    mAddFileButton = new QPushButton("Import");
    mRemoveFileButton = new QPushButton("Remove");
+   mAddFileButton->setToolTip("Import and add a gcode file to the list.");
+   mRemoveFileButton->setToolTip("Remove all selected gcode items from the list.");
    buttonLayout->addWidget(mAddFileButton);
    buttonLayout->addWidget(mRemoveFileButton);
 
@@ -299,11 +302,13 @@ void MainWindow::setupUI()
    buildGroup->setLayout(buildLayout);
 
    mBuildButton = new QPushButton("Splice");
+   mBuildButton->setToolTip("Splices and exports the final gcode file.");
    buildLayout->addWidget(mBuildButton);
 
 #ifdef BUILD_DEBUG_CONTROLS
-   mDebugExportLayerButton = new QPushButton("DEBUG: Export Layer Breakdown");
+   mDebugExportLayerButton = new QPushButton("DEBUG: Export Layer Markings");
    buildLayout->addWidget(mDebugExportLayerButton);
+   mDebugExportLayerButton->setToolTip("This will export a gcode file that contains comments to mark where this\napplication thinks each layer begins (Only does this on first object).");
 #endif
 
    QList<int> sizes;
