@@ -49,6 +49,9 @@ public slots:
    void onAddPressed();
    void onRemovePressed();
    void onBuildPressed();
+#ifdef BUILD_DEBUG_CONTROLS
+   void onDebugExportLayerDataPressed();
+#endif
 
    /**
     * Event handler when the extruder index has changed on an object item.
@@ -67,6 +70,9 @@ private:
    QPushButton*      mAddFileButton;
    QPushButton*      mRemoveFileButton;
    QPushButton*      mBuildButton;
+#ifdef BUILD_DEBUG_CONTROLS
+   QPushButton*      mDebugExportLayerButton;
+#endif
 
    std::vector<GCodeObject*> mObjectList;
 };

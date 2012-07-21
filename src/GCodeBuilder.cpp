@@ -90,33 +90,6 @@ bool GCodeBuilder::build(const QString& fileName)
       return false;
    }
 
-   if (DEBUG_OUTPUT_LAYER_CODE)
-   {
-      const GCodeObject* object = mObjectList[0];
-      if (object)
-      {
-         int levelCount = object->getLevelCount();
-         for (int levelIndex = 0; levelIndex < levelCount; ++levelIndex)
-         {
-            file.write("; ++++++++++++++++++++++++++++++++++++++ Begin Layer ");
-            file.write(QString::number(levelIndex).toAscii());
-            file.write(" ++++++++++++++++++++++++++++++++++++++\n");
-
-            const std::vector<GCodeCommand>& layer = object->getLevel(levelIndex);
-            int codeCount = (int)layer.size();
-            for (int codeIndex = 0; codeIndex < codeCount; ++codeIndex)
-            {
-               const GCodeCommand& code = layer[codeIndex];
-               file.write(code.command.toAscii());
-               file.write(code.comment.toAscii());
-               file.write("\n");
-            }
-         }
-      }
-
-      return true;
-   }
-
    // Start by assembling the initialization code.  Start with
    // our own custom prefix if available, then we'll add the
    // header code from our first object.
@@ -170,6 +143,98 @@ bool GCodeBuilder::build(const QString& fileName)
    mError = "Not implemented yet.";
    return false;
 }
+
+#ifdef BUILD_DEBUG_CONTROLS
+////////////////////////////////////////////////////////////////////////////////
+bool GCodeBuilder::debugBuildLayerData(const QString& fileName)
+{
+   if (mObjectList.empty())
+   {
+      mError = "No objects to export.";
+      return false;
+   }
+
+   QFile file;
+   file.setFileName(fileName);
+   if (!file.open(QIODevice::WriteOnly))
+   {
+      mError = "Could not open file \'" + fileName + "\' for writing.";
+      return false;
+   }
+
+   double extrusionOffset = 0.0;
+   double currentPos[AXIS_NUM] = {0.0,};
+
+   const GCodeObject* object = mObjectList[0];
+   if (object)
+   {
+      int levelCount = object->getLevelCount();
+      for (int levelIndex = 0; levelIndex < levelCount; ++levelIndex)
+      {
+         file.write("; ++++++++++++++++++++++++++++++++++++++ Begin Layer ");
+         file.write(QString::number(levelIndex).toAscii());
+         file.write(" ++++++++++++++++++++++++++++++++++++++\n");
+
+         // If we have the preference to reset the extruder position, start
+         // by resetting the position, then offset every subsequent extrusion
+         // so it is relative to this reset.
+         if (mPrefs.exportResetEPerLayer)
+         {
+            file.write("F92 E0\n");
+            extrusionOffset = currentPos[E];
+         }
+
+         const std::vector<GCodeCommand>& layer = object->getLevel(levelIndex);
+         int codeCount = (int)layer.size();
+         for (int codeIndex = 0; codeIndex < codeCount; ++codeIndex)
+         {
+            const GCodeCommand& code = layer[codeIndex];
+            if (code.type == GCODE_EXTRUDER_MOVEMENT0 ||
+               code.type == GCODE_EXTRUDER_MOVEMENT1)
+            {
+               if (code.type == GCODE_EXTRUDER_MOVEMENT0) file.write("G0 ");
+               else                                       file.write("G1 ");
+
+               for (int axis = 0; axis < AXIS_NUM; ++axis)
+               {
+                  // Only export this axis if it has changed, or if we
+                  // have the preference to re-export duplicate axes.
+                  if (mPrefs.exportDuplicateAxisPositions ||
+                     code.axisValue[axis] != currentPos[axis])
+                  {
+                     file.write(QString(AXIS_NAME[axis]).toAscii());
+
+                     double value = code.axisValue[axis];
+
+                     if (axis == E && mPrefs.exportResetEPerLayer)
+                     {
+                        value = code.axisValue[axis] - extrusionOffset;
+                     }
+                     file.write(QString::number(value).toAscii());
+                     file.write(" ");
+                  }
+
+                  currentPos[axis] = code.axisValue[axis];
+               }
+
+               if (code.hasF)
+               {
+                  file.write("F");
+                  file.write(QString::number(code.f).toAscii());
+                  file.write("\n");
+               }
+            }
+            else
+            {
+               file.write(code.command.toAscii());
+            }
+            file.write(code.comment.toAscii());
+            file.write("\n");
+         }
+      }
+   }
+}
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 const QString& GCodeBuilder::getError() const

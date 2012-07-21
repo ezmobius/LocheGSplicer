@@ -55,8 +55,6 @@ const static char AXIS_NAME[AXIS_NUM] = {'X', 'Y', 'Z', 'E'};
  */
 const static double INCHES_TO_MM = 25.4;
 
-const bool DEBUG_OUTPUT_LAYER_CODE = true;
-
 /**
  * GCode G and M Type definitions.
  */
@@ -232,6 +230,8 @@ struct PreferenceData
 
       customPrefixCode.clear();
       exportComments = true;
+      exportDuplicateAxisPositions = true;
+      exportResetEPerLayer = false;
       printSkirt = true;
       skirtDistance = 2;
 
@@ -249,6 +249,8 @@ struct PreferenceData
    // Splicing properties.
    QString customPrefixCode;
    bool exportComments;
+   bool exportDuplicateAxisPositions;
+   bool exportResetEPerLayer;
    bool printSkirt;
    int skirtDistance;
 

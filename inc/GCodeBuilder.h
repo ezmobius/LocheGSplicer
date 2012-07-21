@@ -46,6 +46,13 @@ public:
     */
    bool build(const QString& fileName);
 
+#ifdef BUILD_DEBUG_CONTROLS
+   /**
+    * Debug method to export the layer debug data.
+    */
+   bool debugBuildLayerData(const QString& fileName);
+#endif
+
    const QString& getError() const;
 
 protected:

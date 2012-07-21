@@ -176,6 +176,45 @@ void MainWindow::onBuildPressed()
    }
 }
 
+#ifdef BUILD_DEBUG_CONTROLS
+////////////////////////////////////////////////////////////////////////////////
+void MainWindow::onDebugExportLayerDataPressed()
+{
+   QSettings settings(COMPANY_NAME, APPLICATION_NAME);
+   QString lastDir = settings.value(LAST_EXPORT_FOLDER, "").toString();
+   lastDir += "\\Spliced";
+
+   QFileDialog dlg;
+   QString fileName = dlg.getSaveFileName(this, "Export GCode File", lastDir, "GCODE (*.gcode);; All Files (*.*)");
+   if (!fileName.isEmpty())
+   {
+      QFileInfo fileInfo = fileName;
+
+      // Remember this directory.
+      lastDir = fileInfo.absolutePath();
+      settings.setValue(LAST_EXPORT_FOLDER, lastDir);
+
+      GCodeBuilder builder(mPrefs);
+      int count = (int)mObjectList.size();
+      for (int index = 0; index < count; ++index)
+      {
+         builder.addObject(mObjectList[index]);
+      }
+
+      if (!builder.debugBuildLayerData(fileName))
+      {
+         // Failed to load the file.
+         QString errorStr = "Failed to splice file \'" + fileName + "\' with error: " + builder.getError();
+         QMessageBox::critical(this, "Failure!", errorStr, QMessageBox::Ok, QMessageBox::NoButton);
+      }
+      else
+      {
+         QMessageBox::information(this, "Success!", "GCode spliced and exported!", QMessageBox::Ok);
+      }
+   }
+}
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 void MainWindow::onExtruderIndexChanged(int index)
 {
@@ -233,7 +272,6 @@ void MainWindow::setupUI()
    headers.push_back("File");
    headers.push_back("Extruder #");
    mObjectListWidget->setHorizontalHeaderLabels(headers);
-   mObjectListWidget->setColumnWidth(0, 200);
 
    // Import and remove buttons for the object list.
    QHBoxLayout* buttonLayout = new QHBoxLayout();
@@ -257,11 +295,16 @@ void MainWindow::setupUI()
    QGroupBox* buildGroup = new QGroupBox("Splice");
    rightLayout->addWidget(buildGroup);
 
-   QHBoxLayout* buildLayout = new QHBoxLayout();
+   QVBoxLayout* buildLayout = new QVBoxLayout();
    buildGroup->setLayout(buildLayout);
 
    mBuildButton = new QPushButton("Splice");
    buildLayout->addWidget(mBuildButton);
+
+#ifdef BUILD_DEBUG_CONTROLS
+   mDebugExportLayerButton = new QPushButton("DEBUG: Export Layer Breakdown");
+   buildLayout->addWidget(mDebugExportLayerButton);
+#endif
 
    QList<int> sizes;
    sizes.push_back((width() / 3) * 2);
@@ -273,9 +316,12 @@ void MainWindow::setupUI()
 ////////////////////////////////////////////////////////////////////////////////
 void MainWindow::setupConnections()
 {
-   connect(mAddFileButton,    SIGNAL(pressed()), this, SLOT(onAddPressed()));
-   connect(mRemoveFileButton, SIGNAL(pressed()), this, SLOT(onRemovePressed()));
-   connect(mBuildButton,      SIGNAL(pressed()), this, SLOT(onBuildPressed()));
+   connect(mAddFileButton,          SIGNAL(pressed()), this, SLOT(onAddPressed()));
+   connect(mRemoveFileButton,       SIGNAL(pressed()), this, SLOT(onRemovePressed()));
+   connect(mBuildButton,            SIGNAL(pressed()), this, SLOT(onBuildPressed()));
+#ifdef BUILD_DEBUG_CONTROLS
+   connect(mDebugExportLayerButton, SIGNAL(pressed()), this, SLOT(onDebugExportLayerDataPressed()));
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
