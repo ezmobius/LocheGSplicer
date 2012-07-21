@@ -151,7 +151,7 @@ double GCodeParser::codeValue()
       char c = mToken.at(mCodePos + 1 + i);
 
       // All number values and decimal point are taken as the value.
-      if ((c >= '0' && c <= '9') || c == '.')
+      if ((c >= '0' && c <= '9') || c == '.' || c == '-')
       {
          value[i] = c;
          skipSpaces = false;
@@ -192,7 +192,7 @@ long GCodeParser::codeValueLong()
       char c = mToken.at(mCodePos + 1 + i);
 
       // All number values are taken as the value.
-      if (c >= '0' && c <= '9')
+      if (c >= '0' && c <= '9' || c == '-')
       {
          value[i] = c;
          skipSpaces = false;

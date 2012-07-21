@@ -51,6 +51,7 @@ bool GCodeObject::loadFile(const QString &fileName)
       return false;
    }
 
+   bool queueFinalizeTempBuffer = false;
    std::vector<GCodeCommand> tempLayerBuffer;
    std::vector<GCodeCommand> layer;
    GCodeCommand code;
@@ -58,6 +59,8 @@ bool GCodeObject::loadFile(const QString &fileName)
    double dValue = 0.0;
    long lValue = 0;
    double coordConversion = 1.0;
+   bool findingFirstLayer = true;
+   bool heightChanged = false;
    bool firstBounds = true;
 
    bool absoluteMode = mPrefs.startInAbsoluteMode;
@@ -66,6 +69,7 @@ bool GCodeObject::loadFile(const QString &fileName)
    double offsetPos[AXIS_NUM] = {0.0,};
    double homeOffset[AXIS_NUM_NO_E] = {0.0,};
 
+   double layerZ = currentPos[Z];
    double lastZ = currentPos[Z];
    double lastE = currentPos[E];
 
@@ -123,21 +127,29 @@ bool GCodeObject::loadFile(const QString &fileName)
                finalizeTempBuffer(tempLayerBuffer, layer);
                changeLayers = true;
             }
-
             // If we are extruding some material,
             // determine if the layer has changed.
-            if (lastE < currentPos[E])
+            else if (lastE < currentPos[E])
             {
                lastE = currentPos[E];
 
-               if (lastZ < currentPos[Z])
+               if (layerZ < currentPos[Z])
                {
-                  lastZ = currentPos[Z];
-                  changeLayers = true;
-               }
-               else
-               {
-                  finalizeTempBuffer(tempLayerBuffer, layer);
+                  layerZ = currentPos[Z];
+                  lastZ = layerZ;
+
+                  // Because we don't start the extruder's first layer at
+                  // position 0, we need to assume that our first height
+                  // above 0 is all part of the first layer, so don't start
+                  // a new one just yet.
+                  if (findingFirstLayer)
+                  {
+                     findingFirstLayer = false;
+                  }
+                  else
+                  {
+                     changeLayers = true;
+                  }
                }
 
                // Update the bounding volume.
@@ -165,9 +177,18 @@ bool GCodeObject::loadFile(const QString &fileName)
                   firstBounds = false;
                }
             }
-            else if (currentPos[E] == 0.0)
+            // Extruder has increased height.
+            else if (layerZ < currentPos[Z])
             {
-               lastE = 0.0;
+               if (lastZ < currentPos[Z])
+               {
+                  lastZ = currentPos[Z];
+                  finalizeTempBuffer(tempLayerBuffer, layer);
+               }
+            }
+            else
+            {
+               queueFinalizeTempBuffer = true;
             }
          }
 
@@ -383,10 +404,16 @@ bool GCodeObject::loadFile(const QString &fileName)
 
       // Add the current code value to the current layer.
       tempLayerBuffer.push_back(code);
+
+      if (queueFinalizeTempBuffer)
+      {
+         queueFinalizeTempBuffer = false;
+         finalizeTempBuffer(tempLayerBuffer, layer);
+      }
    }
 
    // Finalize any remaining temp codes.
-   finalizeTempBuffer(tempLayerBuffer, layer);
+   finalizeTempBuffer(tempLayerBuffer, layer, false);
 
    // Add our final layer.
    if (!layer.empty())
@@ -471,7 +498,7 @@ const QString& GCodeObject::getError() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void GCodeObject::finalizeTempBuffer(std::vector<GCodeCommand>& tempBuffer, std::vector<GCodeCommand>& finalBuffer)
+void GCodeObject::finalizeTempBuffer(std::vector<GCodeCommand>& tempBuffer, std::vector<GCodeCommand>& finalBuffer, bool cullComments)
 {
    if (tempBuffer.empty())
    {
@@ -480,18 +507,25 @@ void GCodeObject::finalizeTempBuffer(std::vector<GCodeCommand>& tempBuffer, std:
 
    // All comments at the end are ignored.
    int lastCommentIndex = (int)tempBuffer.size() - 1;
-   for (; lastCommentIndex >= 0; --lastCommentIndex)
+
+   if (cullComments)
    {
-      GCodeCommand& code = tempBuffer[lastCommentIndex];
-      if (code.type == GCODE_COMMENT)
+      for (; lastCommentIndex >= 0; --lastCommentIndex)
       {
-         continue;
+         GCodeCommand& code = tempBuffer[lastCommentIndex];
+         if (code.type == GCODE_COMMENT)
+         {
+            continue;
+         }
+         break;
       }
-      break;
    }
 
-   finalBuffer.insert(finalBuffer.end(), tempBuffer.begin(), tempBuffer.begin() + lastCommentIndex + 1);
-   tempBuffer.clear();
+   if (lastCommentIndex >= 0)
+   {
+      finalBuffer.insert(finalBuffer.end(), tempBuffer.begin(), tempBuffer.begin() + lastCommentIndex + 1);
+      tempBuffer.clear();
+   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

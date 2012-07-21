@@ -56,7 +56,7 @@ protected:
 
 private:
 
-   void finalizeTempBuffer(std::vector<GCodeCommand>& tempBuffer, std::vector<GCodeCommand>& finalBuffer);
+   void finalizeTempBuffer(std::vector<GCodeCommand>& tempBuffer, std::vector<GCodeCommand>& finalBuffer, bool cullComments = true);
 
    const PreferenceData& mPrefs;
 
