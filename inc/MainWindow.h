@@ -29,6 +29,7 @@ class QListView;
 class QSplitter;
 class QPushButton;
 class QTableWidget;
+class QDoubleSpinBox;
 QT_END_NAMESPACE
 
 class VisualizerView;
@@ -46,9 +47,12 @@ protected:
    void keyPressEvent(QKeyEvent *event);
 
 public slots:
+   void onObjectSelectionChanged();
    void onAddPressed();
    void onRemovePressed();
-   void onBuildPressed();
+   void onPlaterXPosChanged(double pos);
+   void onPlaterYPosChanged(double pos);
+   void onSplicePressed();
 #ifdef BUILD_DEBUG_CONTROLS
    void onDebugExportLayerDataPressed();
 #endif
@@ -69,7 +73,9 @@ private:
    QTableWidget*     mObjectListWidget;
    QPushButton*      mAddFileButton;
    QPushButton*      mRemoveFileButton;
-   QPushButton*      mBuildButton;
+   QDoubleSpinBox*   mPlaterXPosSpin;
+   QDoubleSpinBox*   mPlaterYPosSpin;
+   QPushButton*      mSpliceButton;
 #ifdef BUILD_DEBUG_CONTROLS
    QPushButton*      mDebugExportLayerButton;
 #endif

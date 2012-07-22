@@ -28,11 +28,11 @@
 
 class GCodeObject;
 
-class GCodeBuilder
+class GCodeSplicer
 {
 public:
-   GCodeBuilder(const PreferenceData& prefs);
-   virtual ~GCodeBuilder();
+   GCodeSplicer(const PreferenceData& prefs);
+   virtual ~GCodeSplicer();
 
    /**
     * Inserts an object into the build list.

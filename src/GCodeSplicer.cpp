@@ -18,23 +18,23 @@
  */
 
 
-#include <GCodeBuilder.h>
+#include <GCodeSplicer.h>
 #include <GCodeParser.h>
 #include <GCodeObject.h>
 
 ////////////////////////////////////////////////////////////////////////////////
-GCodeBuilder::GCodeBuilder(const PreferenceData& prefs)
+GCodeSplicer::GCodeSplicer(const PreferenceData& prefs)
    : mPrefs(prefs)
 {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-GCodeBuilder::~GCodeBuilder()
+GCodeSplicer::~GCodeSplicer()
 {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool GCodeBuilder::addObject(const GCodeObject* object)
+bool GCodeSplicer::addObject(const GCodeObject* object)
 {
    if (!object)
    {
@@ -74,7 +74,7 @@ bool GCodeBuilder::addObject(const GCodeObject* object)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool GCodeBuilder::build(const QString& fileName)
+bool GCodeSplicer::build(const QString& fileName)
 {
    if (mObjectList.empty())
    {
@@ -146,7 +146,7 @@ bool GCodeBuilder::build(const QString& fileName)
 
 #ifdef BUILD_DEBUG_CONTROLS
 ////////////////////////////////////////////////////////////////////////////////
-bool GCodeBuilder::debugBuildLayerData(const QString& fileName)
+bool GCodeSplicer::debugBuildLayerData(const QString& fileName)
 {
    if (mObjectList.empty())
    {
@@ -237,7 +237,7 @@ bool GCodeBuilder::debugBuildLayerData(const QString& fileName)
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
-const QString& GCodeBuilder::getError() const
+const QString& GCodeSplicer::getError() const
 {
    return mError;
 }

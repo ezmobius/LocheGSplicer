@@ -226,7 +226,8 @@ struct PreferenceData
    {
       extruderList.push_back(ExtruderData(Qt::green));
       extruderList.push_back(ExtruderData(Qt::blue, 23.5));
-      backgroundColor = QColor::fromCmykF(0.39, 0.39, 0.0, 0.0).dark();
+      backgroundColor = Qt::darkGray;
+      platerIncrementSize = 0.5;
 
       customPrefixCode.clear();
       exportComments = true;
@@ -245,6 +246,7 @@ struct PreferenceData
    // Configuration properties.
    std::vector<ExtruderData> extruderList;
    QColor backgroundColor;
+   double platerIncrementSize;
 
    // Splicing properties.
    QString customPrefixCode;

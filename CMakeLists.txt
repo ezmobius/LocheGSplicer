@@ -78,17 +78,17 @@ ENDIF (BUILD_DEBUG_CONTROLS)
 # Project files
 SET(HEADER_FILES
    ${HEADER_PATH}/Constants.h
-   ${HEADER_PATH}/GCodeBuilder.h
    ${HEADER_PATH}/GCodeObject.h
    ${HEADER_PATH}/GCodeParser.h
+   ${HEADER_PATH}/GCodeSplicer.h
    ${HEADER_PATH}/MainWindow.h
    ${HEADER_PATH}/VisualizerView.h
 )
 
 SET(SOURCE_FILES
-   ${SOURCE_PATH}/GCodeBuilder.cpp
    ${SOURCE_PATH}/GCodeObject.cpp
    ${SOURCE_PATH}/GCodeParser.cpp
+   ${SOURCE_PATH}/GCodeSplicer.cpp
    ${SOURCE_PATH}/Main.cpp
    ${SOURCE_PATH}/MainWindow.cpp
    ${SOURCE_PATH}/VisualizerView.cpp

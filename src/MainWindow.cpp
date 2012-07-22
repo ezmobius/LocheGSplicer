@@ -20,7 +20,7 @@
 
 #include <VisualizerView.h>
 #include <GCodeObject.h>
-#include <GCodeBuilder.h>
+#include <GCodeSplicer.h>
 #include <MainWindow.h>
 
 #include <QtGui>
@@ -41,6 +41,53 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
       close();
    else
       QWidget::keyPressEvent(e);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void MainWindow::onObjectSelectionChanged()
+{
+   int firstSelectedIndex = -1;
+   int selectionCount = 0;
+   int rowCount = (int)mObjectListWidget->rowCount();
+   for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex)
+   {
+      // Remove all items that are selected.
+      if (mObjectListWidget->isItemSelected(mObjectListWidget->item(rowIndex, 0)))
+      {
+         selectionCount++;
+         if (firstSelectedIndex == -1)
+         {
+            firstSelectedIndex = rowIndex;
+         }
+      }
+   }
+
+   bool anySelected = selectionCount > 0? true: false;
+   bool singleObject = selectionCount == 1? true: false;
+
+   // Plater controls can only be edited on a single object.
+   mPlaterXPosSpin->setEnabled(singleObject);
+   mPlaterYPosSpin->setEnabled(singleObject);
+   if (singleObject && firstSelectedIndex > -1 && firstSelectedIndex < (int)mObjectList.size())
+   {
+      // If we are showing our plater controls, update their current values with
+      // our currently selected object.
+      GCodeObject* object = mObjectList[firstSelectedIndex];
+      if (object)
+      {
+         mPlaterXPosSpin->setValue(object->getOffsetPos()[X] + object->getCenter()[X]);
+         mPlaterYPosSpin->setValue(object->getOffsetPos()[Y] + object->getCenter()[Y]);
+      }
+   }
+
+   // Remove button can only be used if there are any selected.
+   mRemoveFileButton->setEnabled(anySelected);
+
+#ifdef BUILD_DEBUG_CONTROLS
+   // The debug export layer data button can only be used if there is a single item
+   // selected.
+   mDebugExportLayerButton->setEnabled(singleObject);
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -111,6 +158,8 @@ void MainWindow::onAddPressed()
       mObjectListWidget->setItem(rowIndex, 0, fileItem);
       mObjectListWidget->setCellWidget(rowIndex, 1, extruderSpin);
       mObjectListWidget->resizeColumnsToContents();
+
+      mSpliceButton->setEnabled(true);
    }
 }
 
@@ -137,10 +186,63 @@ void MainWindow::onRemovePressed()
          rowCount--;
       }
    }
+
+   if (mObjectListWidget->rowCount() == 0)
+   {
+      mSpliceButton->setEnabled(false);
+   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void MainWindow::onBuildPressed()
+void MainWindow::onPlaterXPosChanged(double pos)
+{
+   int rowCount = (int)mObjectListWidget->rowCount();
+   for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex)
+   {
+      // Remove all items that are selected.
+      if (mObjectListWidget->isItemSelected(mObjectListWidget->item(rowIndex, 0)))
+      {
+         if (rowIndex >= (int)mObjectList.size())
+         {
+            break;
+         }
+
+         mObjectList[rowIndex]->setOffsetPos(
+            pos - mObjectList[rowIndex]->getCenter()[X],
+            mObjectList[rowIndex]->getOffsetPos()[Y],
+            mObjectList[rowIndex]->getOffsetPos()[Z]);
+
+         mVisualizerView->updateGL();
+      }
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void MainWindow::onPlaterYPosChanged(double pos)
+{
+   int rowCount = (int)mObjectListWidget->rowCount();
+   for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex)
+   {
+      // Remove all items that are selected.
+      if (mObjectListWidget->isItemSelected(mObjectListWidget->item(rowIndex, 0)))
+      {
+         if (rowIndex >= (int)mObjectList.size())
+         {
+            break;
+         }
+
+         mObjectList[rowIndex]->setOffsetPos(
+            mObjectList[rowIndex]->getOffsetPos()[X],
+            pos - mObjectList[rowIndex]->getCenter()[Y],
+            mObjectList[rowIndex]->getOffsetPos()[Z]);
+
+         mVisualizerView->updateGL();
+      }
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void MainWindow::onSplicePressed()
 {
    QSettings settings(COMPANY_NAME, APPLICATION_NAME);
    QString lastDir = settings.value(LAST_EXPORT_FOLDER, "").toString();
@@ -156,7 +258,7 @@ void MainWindow::onBuildPressed()
       lastDir = fileInfo.absolutePath();
       settings.setValue(LAST_EXPORT_FOLDER, lastDir);
 
-      GCodeBuilder builder(mPrefs);
+      GCodeSplicer builder(mPrefs);
       int count = (int)mObjectList.size();
       for (int index = 0; index < count; ++index)
       {
@@ -194,22 +296,26 @@ void MainWindow::onDebugExportLayerDataPressed()
       lastDir = fileInfo.absolutePath();
       settings.setValue(LAST_EXPORT_FOLDER, lastDir);
 
-      GCodeBuilder builder(mPrefs);
-      int count = (int)mObjectList.size();
+      GCodeSplicer builder(mPrefs);
+      int count = mObjectListWidget->rowCount();
       for (int index = 0; index < count; ++index)
       {
-         builder.addObject(mObjectList[index]);
+         if (mObjectListWidget->isItemSelected(mObjectListWidget->item(index, 0)))
+         {
+            builder.addObject(mObjectList[index]);
+            break;
+         }
       }
 
       if (!builder.debugBuildLayerData(fileName))
       {
          // Failed to load the file.
-         QString errorStr = "Failed to splice file \'" + fileName + "\' with error: " + builder.getError();
+         QString errorStr = "Failed to export file \'" + fileName + "\' with error: " + builder.getError();
          QMessageBox::critical(this, "Failure!", errorStr, QMessageBox::Ok, QMessageBox::NoButton);
       }
       else
       {
-         QMessageBox::information(this, "Success!", "GCode spliced and exported!", QMessageBox::Ok);
+         QMessageBox::information(this, "Success!", "Debug gcode layer data exported!", QMessageBox::Ok);
       }
    }
 }
@@ -265,7 +371,7 @@ void MainWindow::setupUI()
 
    // Object list box.
    mObjectListWidget = new QTableWidget(0, 2);
-   mObjectListWidget->setSelectionMode(QAbstractItemView::MultiSelection);
+   mObjectListWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
    mObjectListWidget->setToolTip("The list of currently imported gcode files to be spliced.");
    objectLayout->addWidget(mObjectListWidget);
 
@@ -281,6 +387,7 @@ void MainWindow::setupUI()
    mRemoveFileButton = new QPushButton("Remove");
    mAddFileButton->setToolTip("Import and add a gcode file to the list.");
    mRemoveFileButton->setToolTip("Remove all selected gcode items from the list.");
+   mRemoveFileButton->setEnabled(false);
    buttonLayout->addWidget(mAddFileButton);
    buttonLayout->addWidget(mRemoveFileButton);
 
@@ -289,10 +396,30 @@ void MainWindow::setupUI()
    QGroupBox* platerGroup = new QGroupBox("Plater");
    rightLayout->addWidget(platerGroup);
 
-   QVBoxLayout* platerLayout = new QVBoxLayout();
+   QGridLayout* platerLayout = new QGridLayout();
    platerGroup->setLayout(platerLayout);
 
-   // TODO: Add plater controls.
+   // Add plater controls.
+   QLabel* platerXLabel = new QLabel("X: ");
+   QLabel* platerYLabel = new QLabel("Y: ");
+   mPlaterXPosSpin = new QDoubleSpinBox();
+   mPlaterYPosSpin = new QDoubleSpinBox();
+   mPlaterXPosSpin->setMinimum(-50.0);
+   mPlaterYPosSpin->setMinimum(-50.0);
+   mPlaterXPosSpin->setMaximum(mPrefs.platformWidth + 50.0);
+   mPlaterYPosSpin->setMaximum(mPrefs.platformHeight + 50.0);
+   mPlaterXPosSpin->setSingleStep(mPrefs.platerIncrementSize);
+   mPlaterYPosSpin->setSingleStep(mPrefs.platerIncrementSize);
+   platerLayout->addWidget(platerXLabel, 0, 0, 1, 1);
+   platerLayout->addWidget(mPlaterXPosSpin, 0, 1, 1, 1);
+   platerLayout->addWidget(platerYLabel, 0, 2, 1, 1);
+   platerLayout->addWidget(mPlaterYPosSpin, 0, 3, 1, 1);
+   platerLayout->setColumnStretch(0, 0);
+   platerLayout->setColumnStretch(1, 1);
+   platerLayout->setColumnStretch(2, 0);
+   platerLayout->setColumnStretch(3, 1);
+   mPlaterXPosSpin->setEnabled(false);
+   mPlaterYPosSpin->setEnabled(false);
 
    // Below the plater controls are the final builder controls.
    QGroupBox* buildGroup = new QGroupBox("Splice");
@@ -301,14 +428,16 @@ void MainWindow::setupUI()
    QVBoxLayout* buildLayout = new QVBoxLayout();
    buildGroup->setLayout(buildLayout);
 
-   mBuildButton = new QPushButton("Splice");
-   mBuildButton->setToolTip("Splices and exports the final gcode file.");
-   buildLayout->addWidget(mBuildButton);
+   mSpliceButton = new QPushButton("Splice");
+   mSpliceButton->setToolTip("Splices and exports the final gcode file.");
+   mSpliceButton->setEnabled(false);
+   buildLayout->addWidget(mSpliceButton);
 
 #ifdef BUILD_DEBUG_CONTROLS
    mDebugExportLayerButton = new QPushButton("DEBUG: Export Layer Markings");
    buildLayout->addWidget(mDebugExportLayerButton);
-   mDebugExportLayerButton->setToolTip("This will export a gcode file that contains comments to mark where this\napplication thinks each layer begins (Only does this on first object).");
+   mDebugExportLayerButton->setToolTip("This will export a gcode file that contains comments to mark where this\napplication thinks each layer begins (Only does this on the first selected object).");
+   mDebugExportLayerButton->setEnabled(false);
 #endif
 
    QList<int> sizes;
@@ -321,11 +450,14 @@ void MainWindow::setupUI()
 ////////////////////////////////////////////////////////////////////////////////
 void MainWindow::setupConnections()
 {
-   connect(mAddFileButton,          SIGNAL(pressed()), this, SLOT(onAddPressed()));
-   connect(mRemoveFileButton,       SIGNAL(pressed()), this, SLOT(onRemovePressed()));
-   connect(mBuildButton,            SIGNAL(pressed()), this, SLOT(onBuildPressed()));
+   connect(mObjectListWidget,       SIGNAL(itemSelectionChanged()),  this, SLOT(onObjectSelectionChanged()));
+   connect(mAddFileButton,          SIGNAL(pressed()),               this, SLOT(onAddPressed()));
+   connect(mRemoveFileButton,       SIGNAL(pressed()),               this, SLOT(onRemovePressed()));
+   connect(mPlaterXPosSpin,         SIGNAL(valueChanged(double)),    this, SLOT(onPlaterXPosChanged(double)));
+   connect(mPlaterYPosSpin,         SIGNAL(valueChanged(double)),    this, SLOT(onPlaterYPosChanged(double)));
+   connect(mSpliceButton,           SIGNAL(pressed()),               this, SLOT(onSplicePressed()));
 #ifdef BUILD_DEBUG_CONTROLS
-   connect(mDebugExportLayerButton, SIGNAL(pressed()), this, SLOT(onDebugExportLayerDataPressed()));
+   connect(mDebugExportLayerButton, SIGNAL(pressed()),               this, SLOT(onDebugExportLayerDataPressed()));
 #endif
 }
 
