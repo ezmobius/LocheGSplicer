@@ -157,7 +157,6 @@ bool GCodeSplicer::build(const QString& fileName)
    }
    file.write("\n");
 
-   double extrusionOffset = 0.0;
    double currentPos[AXIS_NUM] = {0.0,};
 
    double currentLayerHeight = 0.0;
@@ -183,13 +182,13 @@ bool GCodeSplicer::build(const QString& fileName)
       // number of extruder changes done throughout the print.
       for (int extruderIndex = 0; extruderIndex < (int)mPrefs.extruderList.size(); ++extruderIndex)
       {
-         std::vector<GCodeCommand> layer;
          int objectCount = (int)mObjectList.size();
          for (int objectIndex = 0; objectIndex < objectCount; ++objectIndex)
          {
             const GCodeObject* object = mObjectList[objectIndex];
             if (object && object->getExtruder() == currentExtruder)
             {
+               std::vector<GCodeCommand> layer;
                object->getLevelAtHeight(layer, currentLayerHeight);
 
                // If we found some codes for this layer using our current extruder...
@@ -209,7 +208,6 @@ bool GCodeSplicer::build(const QString& fileName)
 
                      // TODO: Perform an extruder swap.
                      lastExtruder = currentExtruder;
-                     extrusionOffset = 0.0;
 
                      file.write("F92 E0");
                      if (mPrefs.exportComments) file.write("; Reset extrusion");
@@ -228,11 +226,14 @@ bool GCodeSplicer::build(const QString& fileName)
                   for (int codeIndex = 0; codeIndex < codeCount; ++codeIndex)
                   {
                      const GCodeCommand& code = layer[codeIndex];
+
+                     // TODO:
                   }
                }
             }
          }
 
+         // Iterate to the next extruder.
          currentExtruder++;
          if (currentExtruder >= (int)mPrefs.extruderList.size())
          {
