@@ -212,6 +212,12 @@ struct ExtruderData
    QColor color;
 };
 
+struct LayerData
+{
+   double height;
+   std::vector<GCodeCommand> codes;
+};
+
 struct VisualizerObjectData
 {
    GCodeObject*   object;
@@ -231,7 +237,7 @@ struct PreferenceData
 
       customPrefixCode.clear();
       exportComments = true;
-      exportDuplicateAxisPositions = true;
+      exportDuplicateAxisPositions = false;
       exportResetEPerLayer = false;
       printSkirt = true;
       skirtDistance = 2;
@@ -239,8 +245,8 @@ struct PreferenceData
       platformWidth = 200;
       platformHeight = 200;
 
-      startInAbsoluteMode = true;
-      startInAbsoluteEMode = true;
+      exportAbsoluteMode = true;
+      exportAbsoluteEMode = true;
    }
 
    // Configuration properties.
@@ -261,8 +267,8 @@ struct PreferenceData
    int platformHeight;
 
    // Advanced properties.
-   bool startInAbsoluteMode;
-   bool startInAbsoluteEMode;
+   bool exportAbsoluteMode;
+   bool exportAbsoluteEMode;
 };
 
 #endif  // CONSTANTS_H

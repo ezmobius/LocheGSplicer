@@ -90,29 +90,15 @@ bool GCodeSplicer::build(const QString& fileName)
       return false;
    }
 
+   file.write("; Spliced using LocheGSplicer BETA");
+
    // Start by assembling the initialization code.  Start with
-   // our own custom prefix if available, then we'll add the
-   // header code from our first object.
-   if (!mPrefs.customPrefixCode.isEmpty())
-   {
-      if (mPrefs.exportComments)
-      {
-         file.write("; *** Begin Custom Prefix GCode ***\n");
-      }
-
-      file.write(mPrefs.customPrefixCode.toAscii());
-      file.write("\n");
-
-      if (mPrefs.exportComments)
-      {
-         file.write("; *** End Custom Prefix GCode ***\n");
-      }
-   }
-
+   // the header code from the first object, then include our
+   // custom header code, and last include our final settings.
    const GCodeObject* object = mObjectList[0];
    if (object && object->getLevelCount())
    {
-      const std::vector<GCodeCommand>& header = object->getLevel(0);
+      const std::vector<GCodeCommand>& header = object->getLevel(0).codes;
       int count = (int)header.size();
       for (int index = 0; index < count; ++index)
       {
@@ -136,12 +122,50 @@ bool GCodeSplicer::build(const QString& fileName)
       }
    }
 
+   if (!mPrefs.customPrefixCode.isEmpty())
+   {
+      file.write(mPrefs.customPrefixCode.toAscii());
+      file.write("\n");
+   }
+
+   file.write("G21; set units to millimeters\n");
+
    // Now append our constant header codes.
+   if (mPrefs.exportAbsoluteMode)
+   {
+      file.write("G90; use absolute coordinates\n");
+   }
+   else
+   {
+      file.write("G91; use relative coordinates\n");
+   }
+
+   if (mPrefs.exportAbsoluteEMode)
+   {
+      file.write("M82; use absolute E coordinates\n");
+   }
+   else
+   {
+      file.write("M83; use relative E coordinates\n");
+   }
+
+   double extrusionOffset = 0.0;
+   double currentPos[AXIS_NUM] = {0.0,};
+
+   // If we have the preference to reset the extruder position, start
+   // by resetting the position, then offset every subsequent extrusion
+   // so it is relative to this reset.
+   if (mPrefs.exportResetEPerLayer)
+   {
+      file.write("F92 E0\n");
+      extrusionOffset = currentPos[E];
+   }
+
+   // Get the total layer count.
 
    file.close();
 
-   mError = "Not implemented yet.";
-   return false;
+   return true;
 }
 
 #ifdef BUILD_DEBUG_CONTROLS
@@ -171,9 +195,13 @@ bool GCodeSplicer::debugBuildLayerData(const QString& fileName)
       int levelCount = object->getLevelCount();
       for (int levelIndex = 0; levelIndex < levelCount; ++levelIndex)
       {
-         file.write("; ++++++++++++++++++++++++++++++++++++++ Begin Layer ");
+         const LayerData& layer = object->getLevel(levelIndex);
+
+         file.write("; ++++++++++++++++++++++++++++++++++++++\n; Begin Layer ");
          file.write(QString::number(levelIndex).toAscii());
-         file.write(" ++++++++++++++++++++++++++++++++++++++\n");
+         file.write(" with height = ");
+         file.write(QString::number(layer.height).toAscii());
+         file.write("\n; ++++++++++++++++++++++++++++++++++++++\n");
 
          // If we have the preference to reset the extruder position, start
          // by resetting the position, then offset every subsequent extrusion
@@ -184,11 +212,10 @@ bool GCodeSplicer::debugBuildLayerData(const QString& fileName)
             extrusionOffset = currentPos[E];
          }
 
-         const std::vector<GCodeCommand>& layer = object->getLevel(levelIndex);
-         int codeCount = (int)layer.size();
+         int codeCount = (int)layer.codes.size();
          for (int codeIndex = 0; codeIndex < codeCount; ++codeIndex)
          {
-            const GCodeCommand& code = layer[codeIndex];
+            const GCodeCommand& code = layer.codes[codeIndex];
             if (code.type == GCODE_EXTRUDER_MOVEMENT0 ||
                code.type == GCODE_EXTRUDER_MOVEMENT1)
             {

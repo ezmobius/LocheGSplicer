@@ -404,7 +404,7 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
    int levelCount = data.object->getLevelCount();
    for (int levelIndex = 0; levelIndex < levelCount; ++levelIndex)
    {
-      const std::vector<GCodeCommand>& levelData = data.object->getLevel(levelIndex);
+      const std::vector<GCodeCommand>& levelData = data.object->getLevel(levelIndex).codes;
 
       int commandCount = (int)levelData.size();
       for (int commandIndex = 0; commandIndex < commandCount; ++commandIndex)
@@ -439,7 +439,7 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
 
       for (int levelIndex = 0; levelIndex < levelCount; ++levelIndex)
       {
-         const std::vector<GCodeCommand>& levelData = data.object->getLevel(levelIndex);
+         const std::vector<GCodeCommand>& levelData = data.object->getLevel(levelIndex).codes;
 
          int commandCount = (int)levelData.size();
          for (int commandIndex = 0; commandIndex < commandCount; ++commandIndex)

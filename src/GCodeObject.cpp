@@ -63,8 +63,8 @@ bool GCodeObject::loadFile(const QString &fileName)
    bool heightChanged = false;
    bool firstBounds = true;
 
-   bool absoluteMode = mPrefs.startInAbsoluteMode;
-   bool absoluteEMode = mPrefs.startInAbsoluteEMode;
+   bool absoluteMode = mPrefs.exportAbsoluteMode;
+   bool absoluteEMode = mPrefs.exportAbsoluteEMode;
    double currentPos[AXIS_NUM] = {0.0,};
    double offsetPos[AXIS_NUM] = {0.0,};
    double homeOffset[AXIS_NUM_NO_E] = {0.0,};
@@ -306,6 +306,7 @@ bool GCodeObject::loadFile(const QString &fileName)
             // gcode coordinate from inches back to millimeters since all of
             // our internal coordinates are in mm.
             coordConversion = INCHES_TO_MM;
+            continue;
          }
 
          // 21: Set units to millimeters.
@@ -314,6 +315,7 @@ bool GCodeObject::loadFile(const QString &fileName)
             // If we find this code, we can undo our conversion from inches
             // to millimeters if necessary.
             coordConversion = 1.0;
+            continue;
          }
       }
       else if (parser.codeSeen('M'))
@@ -323,17 +325,27 @@ bool GCodeObject::loadFile(const QString &fileName)
          code.type = lValue;
 
          // Codes we care about:
+         // 104 & 109: Set Extruder temp.
+         if (lValue == MCODE_SET_EXTRUDER_TEMP ||
+             lValue == MCODE_SET_EXTRUDER_TEMP_WAIT)
+         {
+            // Temperature changes are handled by the splicer.
+            continue;
+         }
+
          // Marlin custom codes:
          // 82: Set E codes absolute
          if (lValue == MCODE_E_ABSOLUTE_COORDS)
          {
             absoluteEMode = true;
+            continue;
          }
 
          // 83: Set E codes relative while in Absolute Coordinates (G90) mode
          if (lValue == MCODE_E_RELATIVE_COORDS)
          {
             absoluteEMode = false;
+            continue;
          }
 
          // 206: Set additional homing offset.
@@ -397,7 +409,7 @@ bool GCodeObject::loadFile(const QString &fileName)
 
          if (!layer.empty())
          {
-            mData.push_back(layer);
+            addLayer(layer);
             layer.clear();
          }
       }
@@ -418,7 +430,7 @@ bool GCodeObject::loadFile(const QString &fileName)
    // Add our final layer.
    if (!layer.empty())
    {
-      mData.push_back(layer);
+      addLayer(layer);
    }
 
    // Calculate our bounding center.
@@ -486,7 +498,7 @@ int GCodeObject::getLevelCount() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const std::vector<GCodeCommand>& GCodeObject::getLevel(int levelIndex) const
+const LayerData& GCodeObject::getLevel(int levelIndex) const
 {
    return mData[levelIndex];
 }
@@ -526,6 +538,43 @@ void GCodeObject::finalizeTempBuffer(std::vector<GCodeCommand>& tempBuffer, std:
       finalBuffer.insert(finalBuffer.end(), tempBuffer.begin(), tempBuffer.begin() + lastCommentIndex + 1);
       tempBuffer.clear();
    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void GCodeObject::addLayer(std::vector<GCodeCommand>& layer)
+{
+   LayerData data;
+   data.codes = layer;
+
+   double height = 0.0;
+
+   double eValue = 0.0;
+   bool firstEChange = false;
+   int count = (int)layer.size();
+   for (int index = 0; index < count; ++index)
+   {
+      GCodeCommand& code = layer[index];
+      if (code.type == GCODE_EXTRUDER_MOVEMENT0 ||
+          code.type == GCODE_EXTRUDER_MOVEMENT1)
+      {
+         if (!firstEChange)
+         {
+            eValue = code.axisValue[E];
+            firstEChange = true;
+         }
+         else
+         {
+            if (code.axisValue[E] > eValue)
+            {
+               height = code.axisValue[Z];
+               break;
+            }
+         }
+      }
+   }
+
+   data.height = height;
+   mData.push_back(data);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -48,7 +48,7 @@ public:
    int getExtruder() const;
 
    int getLevelCount() const;
-   const std::vector<GCodeCommand>& getLevel(int levelIndex) const;
+   const LayerData& getLevel(int levelIndex) const;
 
    const QString& getError() const;
 
@@ -57,10 +57,11 @@ protected:
 private:
 
    void finalizeTempBuffer(std::vector<GCodeCommand>& tempBuffer, std::vector<GCodeCommand>& finalBuffer, bool cullComments = true);
+   void addLayer(std::vector<GCodeCommand>& layer);
 
    const PreferenceData& mPrefs;
 
-   std::vector< std::vector<GCodeCommand> > mData;
+   std::vector<LayerData> mData;
 
    // Bounding Box
    double mMinBounds[AXIS_NUM_NO_E];
