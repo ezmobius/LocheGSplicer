@@ -128,40 +128,121 @@ bool GCodeSplicer::build(const QString& fileName)
       file.write("\n");
    }
 
-   file.write("G21; set units to millimeters\n");
+   file.write("G21");
+   if (mPrefs.exportComments) file.write("; Set units to millimeters");
+   file.write("\n");
 
    // Now append our constant header codes.
    if (mPrefs.exportAbsoluteMode)
    {
-      file.write("G90; use absolute coordinates\n");
+      file.write("G90");
+      if (mPrefs.exportComments) file.write("; Use absolute coordinates");
    }
    else
    {
-      file.write("G91; use relative coordinates\n");
+      file.write("G91");
+      if (mPrefs.exportComments) file.write("; Use relative coordinates");
    }
+   file.write("\n");
 
    if (mPrefs.exportAbsoluteEMode)
    {
-      file.write("M82; use absolute E coordinates\n");
+      file.write("M82");
+      if (mPrefs.exportComments) file.write("; Use absolute E coordinates");
    }
    else
    {
-      file.write("M83; use relative E coordinates\n");
+      file.write("M83");
+      if (mPrefs.exportComments) file.write("; Use relative E coordinates");
    }
+   file.write("\n");
 
    double extrusionOffset = 0.0;
    double currentPos[AXIS_NUM] = {0.0,};
 
-   // If we have the preference to reset the extruder position, start
-   // by resetting the position, then offset every subsequent extrusion
-   // so it is relative to this reset.
-   if (mPrefs.exportResetEPerLayer)
-   {
-      file.write("F92 E0\n");
-      extrusionOffset = currentPos[E];
-   }
+   double currentLayerHeight = 0.0;
+   int lastExtruder = 0;
+   int layerIndex = 0;
 
-   // Get the total layer count.
+   // Iterate through each layer.
+   while (getNextLayer(currentLayerHeight, currentLayerHeight))
+   {
+      if (mPrefs.exportComments)
+      {
+         file.write("; ++++++++++++++++++++++++++++++++++++++\n; Begin Layer ");
+         file.write(QString::number(layerIndex).toAscii());
+         file.write(" with height = ");
+         file.write(QString::number(currentLayerHeight).toAscii());
+         file.write("\n; ++++++++++++++++++++++++++++++++++++++\n");
+      }
+
+      int currentExtruder = lastExtruder;
+
+      // Iterate through each extruder.  We try to start with the last
+      // extruder we used previously in an attempt to reduce the total
+      // number of extruder changes done throughout the print.
+      for (int extruderIndex = 0; extruderIndex < (int)mPrefs.extruderList.size(); ++extruderIndex)
+      {
+         std::vector<GCodeCommand> layer;
+         int objectCount = (int)mObjectList.size();
+         for (int objectIndex = 0; objectIndex < objectCount; ++objectIndex)
+         {
+            const GCodeObject* object = mObjectList[objectIndex];
+            if (object && object->getExtruder() == currentExtruder)
+            {
+               object->getLevelAtHeight(layer, currentLayerHeight);
+
+               // If we found some codes for this layer using our current extruder...
+               if (!layer.empty())
+               {
+                  // Begin by processing the extruder change if necessary.
+                  if (lastExtruder != currentExtruder)
+                  {
+                     if (mPrefs.exportComments)
+                     {
+                        file.write("; ++++++++++++++++++++++++++++++++++++++\n; Swap from extruder ");
+                        file.write(QString::number(lastExtruder).toAscii());
+                        file.write(" to ");
+                        file.write(QString::number(currentExtruder).toAscii());
+                        file.write("\n; ++++++++++++++++++++++++++++++++++++++\n");
+                     }
+
+                     // TODO: Perform an extruder swap.
+                     lastExtruder = currentExtruder;
+                     extrusionOffset = 0.0;
+
+                     file.write("F92 E0");
+                     if (mPrefs.exportComments) file.write("; Reset extrusion");
+                     file.write("\n");
+                  }
+
+                  // Setup the offset based on the offset of the current extruder
+                  // and the offset position to place the object.
+                  double offset[AXIS_NUM] = {0,};
+                  for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
+                  {
+                     offset[axis] = object->getOffsetPos()[axis] + mPrefs.extruderList[lastExtruder].offset[axis];
+                  }
+
+                  int codeCount = (int)layer.size();
+                  for (int codeIndex = 0; codeIndex < codeCount; ++codeIndex)
+                  {
+                     const GCodeCommand& code = layer[codeIndex];
+                  }
+               }
+            }
+         }
+
+         currentExtruder++;
+         if (currentExtruder >= (int)mPrefs.extruderList.size())
+         {
+            currentExtruder = 0;
+         }
+      }
+      //layer.codes.clear();
+   
+      layerIndex++;
+   }
 
    file.close();
 
@@ -203,42 +284,44 @@ bool GCodeSplicer::debugBuildLayerData(const QString& fileName)
          file.write(QString::number(layer.height).toAscii());
          file.write("\n; ++++++++++++++++++++++++++++++++++++++\n");
 
-         // If we have the preference to reset the extruder position, start
-         // by resetting the position, then offset every subsequent extrusion
-         // so it is relative to this reset.
-         if (mPrefs.exportResetEPerLayer)
+         if (levelIndex > 0)
          {
-            file.write("F92 E0\n");
-            extrusionOffset = currentPos[E];
+            file.write("F92 E0; Reset extruder position\n");
+            extrusionOffset = 0.0;
          }
 
          int codeCount = (int)layer.codes.size();
          for (int codeIndex = 0; codeIndex < codeCount; ++codeIndex)
          {
             const GCodeCommand& code = layer.codes[codeIndex];
+
             if (code.type == GCODE_EXTRUDER_MOVEMENT0 ||
                code.type == GCODE_EXTRUDER_MOVEMENT1)
             {
-               if (code.type == GCODE_EXTRUDER_MOVEMENT0) file.write("G0 ");
-               else                                       file.write("G1 ");
+               QString output;
+               if (code.type == GCODE_EXTRUDER_MOVEMENT0) output = "G0 ";
+               else                                       output = "G1 ";
 
+               bool hasChanged = false;
                for (int axis = 0; axis < AXIS_NUM; ++axis)
                {
                   // Only export this axis if it has changed, or if we
                   // have the preference to re-export duplicate axes.
                   if (mPrefs.exportDuplicateAxisPositions ||
-                     code.axisValue[axis] != currentPos[axis])
+                     (axis != E && code.axisValue[axis] != currentPos[axis]) ||
+                     (axis == E && code.axisValue[axis] != 0.0))
                   {
-                     file.write(QString(AXIS_NAME[axis]).toAscii());
+                     output += QString(AXIS_NAME[axis]).toAscii();
 
                      double value = code.axisValue[axis];
 
-                     if (axis == E && mPrefs.exportResetEPerLayer)
+                     if (axis == E)
                      {
-                        value = code.axisValue[axis] - extrusionOffset;
+                        value += extrusionOffset;
+                        extrusionOffset = value;
                      }
-                     file.write(QString::number(value).toAscii());
-                     file.write(" ");
+                     output += QString::number(value).toAscii() + " ";
+                     hasChanged = true;
                   }
 
                   currentPos[axis] = code.axisValue[axis];
@@ -246,9 +329,13 @@ bool GCodeSplicer::debugBuildLayerData(const QString& fileName)
 
                if (code.hasF)
                {
-                  file.write("F");
-                  file.write(QString::number(code.f).toAscii());
-                  file.write("\n");
+                  output += "F" + QString::number(code.f).toAscii();
+                  hasChanged = true;
+               }
+
+               if (hasChanged)
+               {
+                  file.write(output.toAscii());
                }
             }
             else
@@ -267,6 +354,38 @@ bool GCodeSplicer::debugBuildLayerData(const QString& fileName)
 const QString& GCodeSplicer::getError() const
 {
    return mError;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool GCodeSplicer::getNextLayer(double height, double& outHeight)
+{
+   double lowestHeight = 0.0;
+
+   // Determine the next layer by getting the next
+   // highest layer between all of the objects.
+   int count = (int)mObjectList.size();
+   for (int index = 0; index < count; ++index)
+   {
+      const GCodeObject* object = mObjectList[index];
+      if (object)
+      {
+         const LayerData* data = NULL;
+         if (object->getLevelAboveHeight(data, height) && data)
+         {
+            if (lowestHeight == 0.0 || lowestHeight > data->height)
+            {
+               lowestHeight = data->height;
+            }
+         }
+      }
+   }
+
+   if (lowestHeight > 0.0)
+   {
+      outHeight = lowestHeight;
+      return true;
+   }
+   return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

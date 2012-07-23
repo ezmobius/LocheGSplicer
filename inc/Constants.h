@@ -238,7 +238,6 @@ struct PreferenceData
       customPrefixCode.clear();
       exportComments = true;
       exportDuplicateAxisPositions = false;
-      exportResetEPerLayer = false;
       printSkirt = true;
       skirtDistance = 2;
 
@@ -258,7 +257,6 @@ struct PreferenceData
    QString customPrefixCode;
    bool exportComments;
    bool exportDuplicateAxisPositions;
-   bool exportResetEPerLayer;
    bool printSkirt;
    int skirtDistance;
 

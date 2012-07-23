@@ -414,13 +414,17 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
          if (command.hasAxis)
          {
             // We only draw a line segment if we are extruding filament on this line.
-            if (command.axisValue[E] > 0.0 && command.axisValue[E] > lastPos[E])
+            if (command.axisValue[E] != 0.0 && lastPos[E] + command.axisValue[E] > 0.0)
             {
                // Two points per line segment.
                data.vertexCount += 2;
             }
 
-            lastPos[E] = command.axisValue[E];
+            lastPos[E] += command.axisValue[E];
+            if (lastPos[E] > 0.0)
+            {
+               lastPos[E] = 0.0;
+            }
          }
       }
    }
@@ -449,7 +453,7 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
             if (command.hasAxis)
             {
                // We only draw a line segment if we are extruding filament on this line.
-               if (command.axisValue[E] > 0.0 && command.axisValue[E] > lastPos[E])
+               if (command.axisValue[E] != 0.0 && lastPos[E] + command.axisValue[E] > 0.0)
                {
                   // Draw a line from the extruder's current position to the new
                   // position.
@@ -465,9 +469,15 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
                   }
                }
 
-               for (int axis = 0; axis < AXIS_NUM; ++axis)
+               for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
                {
                   lastPos[axis] = command.axisValue[axis];
+               }
+
+               lastPos[E] += command.axisValue[E];
+               if (lastPos[E] > 0.0)
+               {
+                  lastPos[E] = 0.0;
                }
             }
          }

@@ -72,6 +72,7 @@ bool GCodeObject::loadFile(const QString &fileName)
    double layerZ = currentPos[Z];
    double lastZ = currentPos[Z];
    double lastE = currentPos[E];
+   double mostE = currentPos[E];
 
    // Parse the gcode file, at the same time any codes we care about will have
    // special treatment while any codes we don't care about will simply be preserved
@@ -111,6 +112,8 @@ bool GCodeObject::loadFile(const QString &fileName)
                }
                code.axisValue[axis] = currentPos[axis];
             }
+            code.axisValue[E] = code.axisValue[E] - lastE;
+            lastE = currentPos[E];
 
             if (parser.codeSeen('F'))
             {
@@ -129,9 +132,9 @@ bool GCodeObject::loadFile(const QString &fileName)
             }
             // If we are extruding some material,
             // determine if the layer has changed.
-            else if (lastE < currentPos[E])
+            else if (mostE < currentPos[E])
             {
-               lastE = currentPos[E];
+               mostE = currentPos[E];
 
                if (layerZ < currentPos[Z])
                {
@@ -213,7 +216,7 @@ bool GCodeObject::loadFile(const QString &fileName)
             code.hasAxis = true;
 
             // The extruder position does not change from this command.
-            code.axisValue[E] = currentPos[E];
+            code.axisValue[E] = 0.0;
 
             bool foundAny = false;
             for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
@@ -501,6 +504,44 @@ int GCodeObject::getLevelCount() const
 const LayerData& GCodeObject::getLevel(int levelIndex) const
 {
    return mData[levelIndex];
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool GCodeObject::getLevelAtHeight(std::vector<GCodeCommand>& outLayer, double height) const
+{
+   int layerCount = (int)mData.size();
+   for (int layerIndex = 0; layerIndex < layerCount; ++layerIndex)
+   {
+      const LayerData& data = mData[layerIndex];
+      if (abs(data.height - height) < 0.001)
+      {
+         outLayer.insert(outLayer.end(), data.codes.begin(), data.codes.end());
+         return true;
+      }
+      else if (data.height > height)
+      {
+         return false;
+      }
+   }
+
+   return false;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool GCodeObject::getLevelAboveHeight(const LayerData* outLayer, double height) const
+{
+   int layerCount = (int)mData.size();
+   for (int layerIndex = 0; layerIndex < layerCount; ++layerIndex)
+   {
+      const LayerData& data = mData[layerIndex];
+      if (data.height > height)
+      {
+         outLayer = &data;
+         return true;
+      }
+   }
+
+   return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

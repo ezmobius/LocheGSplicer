@@ -59,6 +59,12 @@ protected:
 
 private:
 
+   /**
+    * Retrieves whether there is a next layer above the given height.
+    * and outputs the exact height of the next layer.
+    */
+   bool getNextLayer(double height, double& outHeight);
+
    const PreferenceData& mPrefs;
 
    std::vector<const GCodeObject*> mObjectList;

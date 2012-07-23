@@ -50,6 +50,23 @@ public:
    int getLevelCount() const;
    const LayerData& getLevel(int levelIndex) const;
 
+   /**
+    * Retrieves all layer codes at a given layer height and appends
+    * it to the given layer data.
+    *
+    * @param[out]  outLayer  The layer data to append to.
+    * @param[in]   height    The height to retrieve.
+    */
+   bool getLevelAtHeight(std::vector<GCodeCommand>& outLayer, double height) const;
+
+   /**
+    * Retrieves the layer that is right above a given layer height.
+    *
+    * @param[out]  outLayer  The layer to retrieve.
+    * @param[in]   height    The height.
+    */
+   bool getLevelAboveHeight(const LayerData* outLayer, double height) const;
+
    const QString& getError() const;
 
 protected:
