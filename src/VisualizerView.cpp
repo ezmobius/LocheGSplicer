@@ -331,6 +331,10 @@ void VisualizerView::mouseMoveEvent(QMouseEvent *event)
       QMatrix4x4 mat;
       mat.rotate(mCameraRotTarget[Z], 0.0, 0.0, 1.0);
       QVector3D pos;
+
+      if ((mCameraRot[X] < -90 && mCameraRot[X] > -270) ||
+         (mCameraRot[X] > 90 && mCameraRot[X] < 270)) dy = -dy;
+
       pos.setX(0.1 * -dx);
       pos.setY(0.1 * dy);
 
