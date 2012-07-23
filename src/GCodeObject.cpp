@@ -21,6 +21,8 @@
 #include <GCodeObject.h>
 #include <GCodeParser.h>
 
+#include <math.h>
+
 
 ////////////////////////////////////////////////////////////////////////////////
 GCodeObject::GCodeObject(const PreferenceData& prefs)
@@ -447,6 +449,14 @@ bool GCodeObject::loadFile(const QString &fileName)
    mOffsetPos[Y] = (mPrefs.platformHeight / 2.0) - mCenter[Y];
    mOffsetPos[Z] = 0.0;
 
+   // We need to 'heal' our layers to remove any extruder
+   // retractions and primes that may have been separated
+   // between multiple layers.  Since they have been
+   // separated, we need to remove them entirely because
+   // we can't guarantee that those two layers will be
+   // spliced together consecutively again.
+   healLayerRetraction();
+
    return true;
 }
 
@@ -513,7 +523,7 @@ bool GCodeObject::getLevelAtHeight(std::vector<GCodeCommand>& outLayer, double h
    for (int layerIndex = 0; layerIndex < layerCount; ++layerIndex)
    {
       const LayerData& data = mData[layerIndex];
-      if (abs(data.height - height) < 0.001)
+      if (fabs(data.height - height) < 0.001)
       {
          outLayer.insert(outLayer.end(), data.codes.begin(), data.codes.end());
          return true;
@@ -528,7 +538,7 @@ bool GCodeObject::getLevelAtHeight(std::vector<GCodeCommand>& outLayer, double h
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool GCodeObject::getLevelAboveHeight(const LayerData* outLayer, double height) const
+bool GCodeObject::getLevelAboveHeight(const LayerData*& outLayer, double height) const
 {
    int layerCount = (int)mData.size();
    for (int layerIndex = 0; layerIndex < layerCount; ++layerIndex)
@@ -616,6 +626,12 @@ void GCodeObject::addLayer(std::vector<GCodeCommand>& layer)
 
    data.height = height;
    mData.push_back(data);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void GCodeObject::healLayerRetraction()
+{
+   // TODO
 }
 
 ////////////////////////////////////////////////////////////////////////////////

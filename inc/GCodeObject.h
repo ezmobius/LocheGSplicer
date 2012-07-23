@@ -65,7 +65,7 @@ public:
     * @param[out]  outLayer  The layer to retrieve.
     * @param[in]   height    The height.
     */
-   bool getLevelAboveHeight(const LayerData* outLayer, double height) const;
+   bool getLevelAboveHeight(const LayerData*& outLayer, double height) const;
 
    const QString& getError() const;
 
@@ -75,6 +75,7 @@ private:
 
    void finalizeTempBuffer(std::vector<GCodeCommand>& tempBuffer, std::vector<GCodeCommand>& finalBuffer, bool cullComments = true);
    void addLayer(std::vector<GCodeCommand>& layer);
+   void healLayerRetraction();
 
    const PreferenceData& mPrefs;
 

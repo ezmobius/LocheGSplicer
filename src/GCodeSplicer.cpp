@@ -90,7 +90,7 @@ bool GCodeSplicer::build(const QString& fileName)
       return false;
    }
 
-   file.write("; Spliced using LocheGSplicer BETA");
+   file.write("; Spliced using LocheGSplicer BETA\n");
 
    // Start by assembling the initialization code.  Start with
    // the header code from the first object, then include our
@@ -161,7 +161,7 @@ bool GCodeSplicer::build(const QString& fileName)
 
    double currentLayerHeight = 0.0;
    int lastExtruder = 0;
-   int layerIndex = 0;
+   int layerIndex = 1;
 
    // Iterate through each layer.
    while (getNextLayer(currentLayerHeight, currentLayerHeight))
@@ -176,6 +176,12 @@ bool GCodeSplicer::build(const QString& fileName)
       }
 
       int currentExtruder = lastExtruder;
+      double offset[AXIS_NUM] = {0,};
+
+      //file.write("G92 E0");
+      //if (mPrefs.exportComments) file.write("; Reset extrusion");
+      //file.write("\n");
+      //offset[E] = 0.0;
 
       // Iterate through each extruder.  We try to start with the last
       // extruder we used previously in an attempt to reduce the total
@@ -207,16 +213,34 @@ bool GCodeSplicer::build(const QString& fileName)
                      }
 
                      // TODO: Perform an extruder swap.
-                     lastExtruder = currentExtruder;
+                     // Not entirely sure what this will involve in the end,
+                     // but my guess is probably something around:
+                     // - Retract the current extruder
+                     // - Wipe the current extruder
+                     // - Set the current extruder to an idle temp
+                     // - Swap to the next extruder
+                     // - Heat up the next extruder
+                     // - Prime the next extruder
+                     // - begin printing
+                     //
+                     // My hope is to find a way two swap extruders without
+                     // needing to wait for temperature changes.
 
-                     file.write("F92 E0");
+                     //file.write("T");
+                     //file.write(QString::number(currentExtruder).toAscii());
+                     //if (mPrefs.exportComments) file.write("; Perform the extruder swap");
+                     //file.write("\n");
+
+                     file.write("G92 E0");
                      if (mPrefs.exportComments) file.write("; Reset extrusion");
                      file.write("\n");
+                     offset[E] = 0.0;
+
+                     lastExtruder = currentExtruder;
                   }
 
                   // Setup the offset based on the offset of the current extruder
                   // and the offset position to place the object.
-                  double offset[AXIS_NUM] = {0,};
                   for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
                   {
                      offset[axis] = object->getOffsetPos()[axis] + mPrefs.extruderList[lastExtruder].offset[axis];
@@ -227,7 +251,61 @@ bool GCodeSplicer::build(const QString& fileName)
                   {
                      const GCodeCommand& code = layer[codeIndex];
 
-                     // TODO:
+                     if (code.type == GCODE_EXTRUDER_MOVEMENT0 ||
+                         code.type == GCODE_EXTRUDER_MOVEMENT1)
+                     {
+                        QString output;
+                        if (code.type == GCODE_EXTRUDER_MOVEMENT0) output = "G0 ";
+                        else                                       output = "G1 ";
+
+                        bool hasChanged = false;
+                        for (int axis = 0; axis < AXIS_NUM; ++axis)
+                        {
+                           // Only export this axis if it has changed, or if we
+                           // have the preference to re-export duplicate axes.
+                           if (mPrefs.exportDuplicateAxisPositions ||
+                              (axis != E && code.axisValue[axis] != currentPos[axis]) ||
+                              (axis == E && code.axisValue[axis] != 0.0))
+                           {
+                              output += QString(AXIS_NAME[axis]).toAscii();
+
+                              double value = code.axisValue[axis];
+                              if (axis == E)
+                              {
+                                 // Offset the extrusion value by our extruders flow ratio.
+                                 value *= mPrefs.extruderList[currentExtruder].flow;
+                              }
+                              value += offset[axis];
+                              if (axis == E)
+                              {
+                                 offset[E] = value;
+                              }
+
+                              output += QString::number(value).toAscii() + " ";
+                              hasChanged = true;
+                           }
+
+                           currentPos[axis] = code.axisValue[axis];
+                        }
+
+                        if (code.hasF)
+                        {
+                           output += "F" + QString::number(code.f).toAscii();
+                           hasChanged = true;
+                        }
+
+                        if (hasChanged)
+                        {
+                           file.write(output.toAscii());
+                        }
+                     }
+                     else
+                     {
+                        file.write(code.command.toAscii());
+                     }
+
+                     if (mPrefs.exportComments) file.write(code.comment.toAscii());
+                     file.write("\n");
                   }
                }
             }
@@ -287,7 +365,7 @@ bool GCodeSplicer::debugBuildLayerData(const QString& fileName)
 
          if (levelIndex > 0)
          {
-            file.write("F92 E0; Reset extruder position\n");
+            file.write("G92 E0; Reset extruder position\n");
             extrusionOffset = 0.0;
          }
 

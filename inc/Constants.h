@@ -231,7 +231,8 @@ struct PreferenceData
    PreferenceData()
    {
       extruderList.push_back(ExtruderData(Qt::green));
-      extruderList.push_back(ExtruderData(Qt::blue, 23.5));
+      extruderList.push_back(ExtruderData(Qt::blue, 3.0));
+      //extruderList.push_back(ExtruderData(Qt::blue, 23.5));
       backgroundColor = Qt::darkGray;
       platerIncrementSize = 0.5;
 
