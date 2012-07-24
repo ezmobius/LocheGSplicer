@@ -52,6 +52,8 @@ public:
    QSize sizeHint() const;
 
 public slots:
+   void onBackgroundColorChanged();
+
    void setXTranslation(double pos);
    void setYTranslation(double pos);
    void setZTranslation(double pos);

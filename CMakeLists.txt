@@ -82,6 +82,7 @@ SET(HEADER_FILES
    ${HEADER_PATH}/GCodeParser.h
    ${HEADER_PATH}/GCodeSplicer.h
    ${HEADER_PATH}/MainWindow.h
+   ${HEADER_PATH}/PreferencesDialog.h
    ${HEADER_PATH}/VisualizerView.h
 )
 
@@ -91,6 +92,7 @@ SET(SOURCE_FILES
    ${SOURCE_PATH}/GCodeSplicer.cpp
    ${SOURCE_PATH}/Main.cpp
    ${SOURCE_PATH}/MainWindow.cpp
+   ${SOURCE_PATH}/PreferencesDialog.cpp
    ${SOURCE_PATH}/VisualizerView.cpp
 )
 

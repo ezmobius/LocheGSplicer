@@ -47,6 +47,8 @@ protected:
    void keyPressEvent(QKeyEvent *event);
 
 public slots:
+   void onOptionsPressed();
+   void onHelpPressed();
    void onObjectSelectionChanged();
    void onAddPressed();
    void onRemovePressed();
@@ -67,6 +69,9 @@ private:
    void setupConnections();
 
    PreferenceData    mPrefs;
+
+   QPushButton*      mOptionsButton;
+   QPushButton*      mHelpButton;
 
    QSplitter*        mMainSplitter;
    VisualizerView*   mVisualizerView;

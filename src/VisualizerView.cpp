@@ -145,6 +145,13 @@ QSize VisualizerView::sizeHint() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+void VisualizerView::onBackgroundColorChanged()
+{
+   qglClearColor(mPrefs.backgroundColor);
+   updateGL();
+}
+
+////////////////////////////////////////////////////////////////////////////////
 void VisualizerView::setXTranslation(double pos)
 {
    mCameraTransTarget[X] = pos;

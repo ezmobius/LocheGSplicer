@@ -230,11 +230,7 @@ struct PreferenceData
 {
    PreferenceData()
    {
-      extruderList.push_back(ExtruderData(Qt::green));
-      extruderList.push_back(ExtruderData(Qt::blue, 3.0));
-      //extruderList.push_back(ExtruderData(Qt::blue, 23.5));
       backgroundColor = Qt::darkGray;
-      platerIncrementSize = 0.5;
 
       customPrefixCode.clear();
       exportComments = true;
@@ -242,6 +238,9 @@ struct PreferenceData
       printSkirt = true;
       skirtDistance = 2;
 
+      extruderList.push_back(ExtruderData(Qt::green));
+      extruderList.push_back(ExtruderData(Qt::blue, 3.0));
+      //extruderList.push_back(ExtruderData(Qt::blue, 23.5));
       platformWidth = 200;
       platformHeight = 200;
 
@@ -253,9 +252,7 @@ struct PreferenceData
    }
 
    // Editor properties.
-   std::vector<ExtruderData> extruderList;
    QColor backgroundColor;
-   double platerIncrementSize;
 
    // Splicing properties.
    QString customPrefixCode;
@@ -265,6 +262,7 @@ struct PreferenceData
    int skirtDistance;
 
    // Printer properties.
+   std::vector<ExtruderData> extruderList;
    int platformWidth;
    int platformHeight;
 

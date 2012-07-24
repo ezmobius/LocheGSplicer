@@ -18,10 +18,11 @@
  */
 
 
+#include <MainWindow.h>
 #include <VisualizerView.h>
 #include <GCodeObject.h>
 #include <GCodeSplicer.h>
-#include <MainWindow.h>
+#include <PreferencesDialog.h>
 
 #include <QtGui>
 #include <QVariant>
@@ -41,6 +42,22 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
       close();
    else
       QWidget::keyPressEvent(e);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void MainWindow::onOptionsPressed()
+{
+   PreferencesDialog dlg(mPrefs);
+
+   connect(&dlg, SIGNAL(onBackgroundColorChanged()), mVisualizerView, SLOT(onBackgroundColorChanged()));
+
+   dlg.exec();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void MainWindow::onHelpPressed()
+{
+   QMessageBox::information(this, "Help!", "Not implemented yet.", QMessageBox::Ok);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -345,7 +362,7 @@ void MainWindow::setupUI()
 {
    setWindowTitle(tr("LocheGSplicer"));
 
-   QHBoxLayout* mainLayout = new QHBoxLayout();
+   QVBoxLayout* mainLayout = new QVBoxLayout();
    mainLayout->setMargin(0);
 
    mMainSplitter = new QSplitter(Qt::Horizontal);
@@ -362,6 +379,17 @@ void MainWindow::setupUI()
    mMainSplitter->addWidget(rightWidget);
    QVBoxLayout* rightLayout = new QVBoxLayout();
    rightWidget->setLayout(rightLayout);
+
+   QHBoxLayout* toolLayout = new QHBoxLayout();
+   rightLayout->addLayout(toolLayout);
+
+   mOptionsButton = new QPushButton("Options");
+   mOptionsButton->setShortcut(QKeySequence("Ctrl+O"));
+   toolLayout->addWidget(mOptionsButton);
+
+   mHelpButton = new QPushButton("Help");
+   mHelpButton->setShortcut(QKeySequence("F1"));
+   toolLayout->addWidget(mHelpButton);
 
    QGroupBox* objectGroup = new QGroupBox("Objects");
    rightLayout->addWidget(objectGroup);
@@ -408,8 +436,8 @@ void MainWindow::setupUI()
    mPlaterYPosSpin->setMinimum(-50.0);
    mPlaterXPosSpin->setMaximum(mPrefs.platformWidth + 50.0);
    mPlaterYPosSpin->setMaximum(mPrefs.platformHeight + 50.0);
-   mPlaterXPosSpin->setSingleStep(mPrefs.platerIncrementSize);
-   mPlaterYPosSpin->setSingleStep(mPrefs.platerIncrementSize);
+   mPlaterXPosSpin->setSingleStep(0.5);
+   mPlaterYPosSpin->setSingleStep(0.5);
    platerLayout->addWidget(platerXLabel, 0, 0, 1, 1);
    platerLayout->addWidget(mPlaterXPosSpin, 0, 1, 1, 1);
    platerLayout->addWidget(platerYLabel, 0, 2, 1, 1);
@@ -450,6 +478,8 @@ void MainWindow::setupUI()
 ////////////////////////////////////////////////////////////////////////////////
 void MainWindow::setupConnections()
 {
+   connect(mOptionsButton,          SIGNAL(pressed()),               this, SLOT(onOptionsPressed()));
+   connect(mHelpButton,             SIGNAL(pressed()),               this, SLOT(onHelpPressed()));
    connect(mObjectListWidget,       SIGNAL(itemSelectionChanged()),  this, SLOT(onObjectSelectionChanged()));
    connect(mAddFileButton,          SIGNAL(pressed()),               this, SLOT(onAddPressed()));
    connect(mRemoveFileButton,       SIGNAL(pressed()),               this, SLOT(onRemovePressed()));
