@@ -75,7 +75,7 @@ private:
 
    void finalizeTempBuffer(std::vector<GCodeCommand>& tempBuffer, std::vector<GCodeCommand>& finalBuffer, bool cullComments = true);
    void addLayer(std::vector<GCodeCommand>& layer);
-   void healLayerRetraction();
+   bool healLayerRetraction();
 
    const PreferenceData& mPrefs;
 

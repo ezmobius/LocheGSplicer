@@ -455,9 +455,7 @@ bool GCodeObject::loadFile(const QString &fileName)
    // separated, we need to remove them entirely because
    // we can't guarantee that those two layers will be
    // spliced together consecutively again.
-   healLayerRetraction();
-
-   return true;
+   return healLayerRetraction();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -629,9 +627,112 @@ void GCodeObject::addLayer(std::vector<GCodeCommand>& layer)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void GCodeObject::healLayerRetraction()
+bool GCodeObject::healLayerRetraction()
 {
-   // TODO
+   bool findPrimer = false;
+   int layerCount = (int)mData.size();
+   for (int layerIndex = 0; layerIndex < layerCount; ++layerIndex)
+   {
+      LayerData& layer = mData[layerIndex];
+      double extrusionValue = 0.0;
+
+      // If a previous layer is missing its primer, attempt
+      // to find it.
+      if (findPrimer)
+      {
+         findPrimer = false;
+
+         int codeCount = (int)layer.codes.size();
+         for (int codeIndex = 0; codeIndex < codeCount; ++codeIndex)
+         {
+            GCodeCommand& code = layer.codes[codeIndex];
+
+            if (code.type == GCODE_EXTRUDER_MOVEMENT0 ||
+               code.type == GCODE_EXTRUDER_MOVEMENT1)
+            {
+               extrusionValue += code.axisValue[E];
+
+               // If we find another retraction that happens before
+               // we have primed, there may be something wrong with
+               // the slicer that made this gcode file as this
+               // should not happen.
+               if (code.axisValue[E] < 0.0)
+               {
+                  mError = "A retraction was found that was not followed properly by a primer.";
+                  return false;
+               }
+
+               double retractionAmount = mPrefs.retraction;
+               if (mPrefs.retraction < 0.0)
+               {
+                  retractionAmount = -code.axisValue[E];
+               }
+               double primeAmount = mPrefs.primer;
+               if (mPrefs.primer < 0.0)
+               {
+                  primeAmount = -code.axisValue[E];
+               }
+
+               // Determine if we have found our primer, and then
+               // erase it because we have already removed the
+               // retraction.
+               if (extrusionValue >= primeAmount - retractionAmount)
+               {
+                  layer.codes.erase(layer.codes.begin() + codeIndex);
+                  break;
+               }
+            }
+         }
+      }
+
+      // Search this layer, starting from the end, for any
+      // retraction that does not get primed again.
+      extrusionValue = 0.0;
+      int codeCount = (int)layer.codes.size();
+      for (int codeIndex = codeCount-1; codeIndex >= 0; --codeIndex)
+      {
+         GCodeCommand& code = layer.codes[codeIndex];
+
+         if (code.type == GCODE_EXTRUDER_MOVEMENT0 ||
+             code.type == GCODE_EXTRUDER_MOVEMENT1)
+         {
+            extrusionValue += code.axisValue[E];
+
+            // Once we find our first instance of retraction,
+            // we are done iterating through this layer.  If
+            // we find that this retraction is more than what
+            // gets extruded after within this layer, then we
+            // need to check the next layer for the prime.
+            if (code.axisValue[E] < 0.0)
+            {
+               double retractionAmount = mPrefs.retraction;
+               if (mPrefs.retraction < 0.0)
+               {
+                  retractionAmount = -code.axisValue[E];
+               }
+               double primeAmount = mPrefs.primer;
+               if (mPrefs.primer < 0.0)
+               {
+                  primeAmount = -code.axisValue[E];
+               }
+               // If we are still in the negative, meaning we
+               // are still retracted and not fully primed,
+               // then we need to remove this retraction
+               // from the layer and then search the next
+               // layer for the primer that matches this.
+               extrusionValue += primeAmount;
+               if (extrusionValue < primeAmount - retractionAmount)
+               {
+                  layer.codes.erase(layer.codes.begin() + codeIndex);
+                  findPrimer = true;
+               }
+               break;
+            }
+         }
+      }
+   }
+
+   return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

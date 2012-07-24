@@ -247,9 +247,12 @@ struct PreferenceData
 
       exportAbsoluteMode = true;
       exportAbsoluteEMode = true;
+
+      double retraction = -1.0;
+      double primer = -1.0;
    }
 
-   // Configuration properties.
+   // Editor properties.
    std::vector<ExtruderData> extruderList;
    QColor backgroundColor;
    double platerIncrementSize;
@@ -268,6 +271,8 @@ struct PreferenceData
    // Advanced properties.
    bool exportAbsoluteMode;
    bool exportAbsoluteEMode;
+   double retraction;
+   double primer;
 };
 
 #endif  // CONSTANTS_H

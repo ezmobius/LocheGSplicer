@@ -178,10 +178,10 @@ bool GCodeSplicer::build(const QString& fileName)
       int currentExtruder = lastExtruder;
       double offset[AXIS_NUM] = {0,};
 
-      //file.write("G92 E0");
-      //if (mPrefs.exportComments) file.write("; Reset extrusion");
-      //file.write("\n");
-      //offset[E] = 0.0;
+      file.write("G92 E0");
+      if (mPrefs.exportComments) file.write("; Reset extrusion");
+      file.write("\n");
+      offset[E] = 0.0;
 
       // Iterate through each extruder.  We try to start with the last
       // extruder we used previously in an attempt to reduce the total
