@@ -50,7 +50,7 @@ IF(APPLE)
    SET(CMAKE_C_FLAGS "-pipe -Wnewline-eof")
 
    if (NOT CMAKE_OSX_ARCHITECTURES)
-     set(CMAKE_OSX_ARCHITECTURES "i386" CACHE STRING "Build architectures for OSX" FORCE)
+     set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "Build architectures for OSX" FORCE)
    endif()
 
    if (NOT CMAKE_OSX_SYSROOT)
