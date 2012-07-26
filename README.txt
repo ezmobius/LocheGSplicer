@@ -27,6 +27,7 @@ files for use with 3D Printers that have multiple extruders.
 
 Building from Source:
 ---------------------
+Download the source here: https://github.com/Lochemage/LocheGSplicer
 
 LocheGSplicer uses CMake (http://www.cmake.org) to generate the project files.
 
