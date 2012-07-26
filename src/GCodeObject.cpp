@@ -28,6 +28,7 @@
 GCodeObject::GCodeObject(const PreferenceData& prefs)
    : mPrefs(prefs)
    , mExtruderIndex(0)
+   , mAverageLayerHeight(0.0)
 {
    for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
    {
@@ -63,6 +64,7 @@ bool GCodeObject::loadFile(const QString &fileName)
    double coordConversion = 1.0;
    bool findingFirstLayer = true;
    bool firstBounds = true;
+   int averageCount = 0;
 
    bool absoluteMode = mPrefs.exportAbsoluteMode;
    bool absoluteEMode = mPrefs.exportAbsoluteEMode;
@@ -139,6 +141,10 @@ bool GCodeObject::loadFile(const QString &fileName)
 
                if (layerZ < currentPos[Z])
                {
+                  double height = currentPos[Z] - layerZ;
+                  mAverageLayerHeight += height;
+                  averageCount++;
+
                   layerZ = currentPos[Z];
                   lastZ = layerZ;
 
@@ -448,6 +454,11 @@ bool GCodeObject::loadFile(const QString &fileName)
    mOffsetPos[Y] = (mPrefs.platformHeight / 2.0) - mCenter[Y];
    mOffsetPos[Z] = 0.0;
 
+   if (averageCount > 1)
+   {
+      mAverageLayerHeight /= averageCount;
+   }
+
    // We need to 'heal' our layers to remove any extruder
    // retractions and primes that may have been separated
    // between multiple layers.  Since they have been
@@ -499,6 +510,12 @@ void GCodeObject::setExtruder(int extruderIndex)
 int GCodeObject::getExtruder() const
 {
    return mExtruderIndex;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+double GCodeObject::getAverageLayerHeight() const
+{
+   return mAverageLayerHeight;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

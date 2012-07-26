@@ -223,6 +223,7 @@ struct VisualizerObjectData
    GCodeObject*   object;
 
    double*        vertexBuffer;
+   double*        normalBuffer;
    int            vertexCount;
 };
 

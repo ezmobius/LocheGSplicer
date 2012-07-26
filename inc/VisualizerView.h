@@ -94,6 +94,7 @@ private:
     * Generate geometry data for the given object.
     */
    void generateGeometry(VisualizerObjectData& data);
+   void addGeometryPoint(double* buffer, int& index, const QVector3D& point);
 
    double mCameraRot[AXIS_NUM_NO_E];
    double mCameraTrans[AXIS_NUM_NO_E];

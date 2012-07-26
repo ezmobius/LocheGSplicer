@@ -47,6 +47,8 @@ public:
    void setExtruder(int extruderIndex);
    int getExtruder() const;
 
+   double getAverageLayerHeight() const;
+
    int getLevelCount() const;
    const LayerData& getLevel(int levelIndex) const;
 
@@ -88,6 +90,8 @@ private:
 
    double mOffsetPos[AXIS_NUM_NO_E];
    int    mExtruderIndex;
+
+   double mAverageLayerHeight;
 
    QString mError;
 };
