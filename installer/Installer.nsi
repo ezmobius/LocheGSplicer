@@ -207,7 +207,9 @@ Section Uninstall
   RMDIR /r "$INSTDIR"
 
   Delete "$SMPROGRAMS\$ICONS_GROUP\*.*"
-  RMDir /r "$SMPROGRAMS\$ICONS_GROUP"
+  RMDIR /r "$SMPROGRAMS\$ICONS_GROUP"
+
+  Delete "$DESKTOP\LocheGSplicer.lnk"
 
   DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
   DeleteRegKey HKLM "${PRODUCT_DIR_REGKEY}"
