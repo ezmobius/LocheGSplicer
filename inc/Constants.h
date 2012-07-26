@@ -247,8 +247,8 @@ struct PreferenceData
       exportAbsoluteMode = true;
       exportAbsoluteEMode = true;
 
-      double retraction = -1.0;
-      double primer = -1.0;
+      retraction = -1.0;
+      primer = -1.0;
    }
 
    // Editor properties.

@@ -26,8 +26,8 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 GCodeObject::GCodeObject(const PreferenceData& prefs)
-   : mExtruderIndex(0)
-   , mPrefs(prefs)
+   : mPrefs(prefs)
+   , mExtruderIndex(0)
 {
    for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
    {
@@ -62,7 +62,6 @@ bool GCodeObject::loadFile(const QString &fileName)
    long lValue = 0;
    double coordConversion = 1.0;
    bool findingFirstLayer = true;
-   bool heightChanged = false;
    bool firstBounds = true;
 
    bool absoluteMode = mPrefs.exportAbsoluteMode;

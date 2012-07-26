@@ -317,7 +317,18 @@ void VisualizerView::resizeGL(int width, int height)
    glMatrixMode(GL_PROJECTION);
    glLoadIdentity();
    //glOrtho(-0.5, +0.5, -0.5, +0.5, 4.0, 15.0);
-   gluPerspective(45.0f, width/(double)height, 0.1f, 10000.0f);
+
+   // Set up perspective view.
+   GLdouble xmin, xmax, ymin, ymax, aspect;
+
+   aspect = width/(double)height;
+   ymax = 0.1f * tan( 45.0f * M_PI / 360.0 );
+   ymin = -ymax;
+   xmin = ymin * aspect;
+   xmax = ymax * aspect;
+
+   glFrustum(xmin, xmax, ymin, ymax, 0.1, 10000.0);
+
    glMatrixMode(GL_MODELVIEW);
 }
 

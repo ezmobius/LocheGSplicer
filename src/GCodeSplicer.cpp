@@ -52,7 +52,6 @@ bool GCodeSplicer::addObject(const GCodeObject* object)
    }
 
    // Now insert the new object into the list, sorted by extruder index.
-   int extruderIndex = object->getExtruder();
    for (int index = 0; index < count; ++index)
    {
       const GCodeObject* other = mObjectList[index];
@@ -426,6 +425,8 @@ bool GCodeSplicer::debugBuildLayerData(const QString& fileName)
          }
       }
    }
+	
+   return true;
 }
 #endif
 
