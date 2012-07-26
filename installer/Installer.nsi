@@ -1,8 +1,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;             Installer script for LocheGSplicer              ;;;;
 ;;;;                                                             ;;;;
-;;;; Uses environment variables to find external files           ;;;;
-;;;; QT_DIR - Root Qt SDK folder.                                ;;;;
+;;;;         To generate the installer, download NSIS            ;;;;
+;;;;         (http://nsis.sourceforge.net/Download)              ;;;;
+;;;;         and compile using this NSI script.                  ;;;;
+;;;;                                                             ;;;;
+;;;;     Uses environment variables to find external files       ;;;;
+;;;;      QT_DIR - Root Qt SDK folder.                           ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -13,10 +17,11 @@
 !define PROJECT_TEST_PATH     "..\test"
 
 !define QT_PATH               "$%QT_DIR%\bin"
+;;;;                                                             ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                            Setup                            ;;;;
 ;!define DEBUG_INSTALL
 !define VS2008
 
@@ -50,6 +55,8 @@
   OutFile LocheGSplicer${CONFIG_NAME}-${VERSION}-setup.exe
 !endif
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                              UI                             ;;;;
 ; MUI 1.67 compatible ------
 !include "MUI.nsh"
 
@@ -92,6 +99,8 @@ InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                    Application Binaries                     ;;;;
 Section "Application" SEC01
   SetOutPath "$INSTDIR"
   SetOverwrite ifnewer
@@ -115,9 +124,10 @@ Section "Application" SEC01
   SetOutPath "$INSTDIR\bin"
   File "${PROJECT_BIN_PATH}\LocheGSplicer${DEBUG_FLAG}.pdb"
 !endif
-
 SectionEnd
  
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                           Assets                            ;;;;
 Section "Assets" SEC02
   ; Config
   SetOutPath "$INSTDIR\data\config"
@@ -142,6 +152,8 @@ Section "Shortcuts" SEC03
   CreateShortCut "$DESKTOP\LocheGSplicer.lnk"                             "$INSTDIR\LocheGSplicer${CONFIG_NAME}.bat"
 SectionEnd
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                        Redistribution                       ;;;;
 Section /o "Install VCRedist Package" VCRedistSection
   SetOutPath $INSTDIR
 !ifdef VS2008
@@ -150,12 +162,16 @@ Section /o "Install VCRedist Package" VCRedistSection
 !endif
 SectionEnd
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                         Shortcuts                           ;;;;
 Section -AdditionalIcons
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
   CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\Uninstall.lnk" "$INSTDIR\uninst.exe"
   !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                          Uninstall                          ;;;;
 Section -Post
   WriteUninstaller "$INSTDIR\uninst.exe"
   WriteRegStr HKLM "${PRODUCT_DIR_REGKEY}" "" $INSTDIR
