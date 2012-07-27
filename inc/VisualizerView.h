@@ -95,15 +95,12 @@ protected:
 private:
 
    /**
-    * Free's the memory allocated in the geometry buffers of an object.
-    */
-   void freeObjectBuffers(VisualizerObjectData& data);
-
-   /**
     * Generate geometry data for the given object.
     */
    bool generateGeometry(VisualizerObjectData& data);
    void addGeometryPoint(double* buffer, int& index, const QVector3D& point);
+
+   void freeBuffers(VisualizerObjectData& data);
 
    double mCameraRot[AXIS_NUM_NO_E];
    double mCameraTrans[AXIS_NUM_NO_E];

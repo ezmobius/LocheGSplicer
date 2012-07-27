@@ -238,15 +238,53 @@ struct LayerData
    std::vector<GCodeCommand> codes;
 };
 
-struct VisualizerObjectData
+struct VisualizerBufferData
 {
-   GCodeObject*   object;
+   VisualizerBufferData()
+   {
+      vertexBuffer = NULL;
+      normalBuffer = NULL;
+      indexBuffer = NULL;
+      vertexCount = 0;
+      quadCount = 0;
+   }
+
+   void free()
+   {
+      if (vertexBuffer)
+      {
+         delete [] vertexBuffer;
+         vertexBuffer = NULL;
+      }
+
+      if (normalBuffer)
+      {
+         delete [] normalBuffer;
+         normalBuffer = NULL;
+      }
+
+      if (indexBuffer)
+      {
+         delete [] indexBuffer;
+         indexBuffer = NULL;
+      }
+
+      vertexCount = 0;
+      quadCount = 0;
+   }
 
    double*        vertexBuffer;
    double*        normalBuffer;
    unsigned int*  indexBuffer;
    int            vertexCount;
    unsigned int   quadCount;
+};
+
+struct VisualizerObjectData
+{
+   GCodeObject*   object;
+
+   std::vector<VisualizerBufferData> layers;
 };
 
 struct PreferenceData
