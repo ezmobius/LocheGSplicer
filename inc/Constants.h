@@ -256,7 +256,7 @@ struct PreferenceData
       // Editor Properties
       backgroundColor = Qt::darkGray;
       drawQuality = DRAW_QUALITY_MED;
-      layerSkipSize = 5;
+      layerSkipSize = 0;
 
       // Splicing Properties
       customPrefixCode.clear();
