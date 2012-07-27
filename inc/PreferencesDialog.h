@@ -26,6 +26,8 @@
 
 QT_BEGIN_NAMESPACE
 class QTabWidget;
+class QComboBox;
+class QSpinBox;
 QT_END_NAMESPACE
 
 
@@ -36,15 +38,19 @@ class PreferencesDialog : public QDialog
 public:
    PreferencesDialog(PreferenceData& prefs);
 
+   PreferenceData getPreferences() const;
+
 protected:
    void keyPressEvent(QKeyEvent *event);
 
 signals:
-   void onBackgroundColorChanged();
+   void emitBackgroundColorChanged(const QColor& color);
 
 public slots:
    void onSaveConfigPressed();
    void onLoadConfigPressed();
+   void onDrawQualityChanged(int value);
+   void onLayerSkipChanged(int value);
    void onBackgroundColorPressed();
    void onDefaultPressed();
 
@@ -54,13 +60,18 @@ private:
 
    void setBackgroundColor(const QColor& color);
 
-   PreferenceData&   mPrefs;
+   PreferenceData    mPrefs;
 
    QTabWidget*       mTabWidget;
 
    QPushButton*      mSaveConfigurationButton;
    QPushButton*      mLoadConfigurationButton;
+   QComboBox*        mDrawQualityCombo;
+   QSpinBox*         mLayerSkipSpin;
    QPushButton*      mBackgroundColorButton;
+
+   QPushButton*      mOkButton;
+   QPushButton*      mCancelButton;
    QPushButton*      mDefaultButton;
 };
 

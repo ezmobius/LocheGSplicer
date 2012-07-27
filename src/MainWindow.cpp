@@ -49,9 +49,31 @@ void MainWindow::onOptionsPressed()
 {
    PreferencesDialog dlg(mPrefs);
 
-   connect(&dlg, SIGNAL(onBackgroundColorChanged()), mVisualizerView, SLOT(onBackgroundColorChanged()));
+   connect(&dlg, SIGNAL(emitBackgroundColorChanged(const QColor&)), mVisualizerView, SLOT(onBackgroundColorChanged(const QColor&)));
 
-   dlg.exec();
+   if (dlg.exec() == QDialog::Accepted)
+   {
+      // Check for draw quality changes
+      bool regenerateGeometry = false;
+      if (mPrefs.drawQuality != dlg.getPreferences().drawQuality ||
+          mPrefs.layerSkipSize != dlg.getPreferences().layerSkipSize)
+      {
+         regenerateGeometry = true;
+      }
+
+      // Finalize the properties.
+      mPrefs = dlg.getPreferences();
+
+      if (regenerateGeometry)
+      {
+         mVisualizerView->regenerateGeometry();
+      }
+   }
+   else
+   {
+      // Undo all temp changes that were rejected.
+      mVisualizerView->onBackgroundColorChanged(mPrefs.backgroundColor);
+   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

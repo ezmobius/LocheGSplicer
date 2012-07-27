@@ -51,8 +51,10 @@ public:
    QSize minimumSizeHint() const;
    QSize sizeHint() const;
 
+   void regenerateGeometry();
+
 public slots:
-   void onBackgroundColorChanged();
+   void onBackgroundColorChanged(const QColor& color);
 
    void setXTranslation(double pos);
    void setYTranslation(double pos);
@@ -89,6 +91,11 @@ protected:
    void drawObject(const VisualizerObjectData& object);
 
 private:
+
+   /**
+    * Free's the memory allocated in the geometry buffers of an object.
+    */
+   void freeObjectBuffers(VisualizerObjectData& data);
 
    /**
     * Generate geometry data for the given object.

@@ -137,6 +137,13 @@ enum GCodeType
    MCODE_EMERGENCY_STOP                   = 2000,  // M0
 };
 
+enum DrawQuality
+{
+   DRAW_QUALITY_LOW,
+   DRAW_QUALITY_MED,
+   DRAW_QUALITY_HIGH,
+};
+
 enum PointType
 {
    POINT_FIRST_TOP_LEFT,
@@ -246,20 +253,26 @@ struct PreferenceData
 {
    PreferenceData()
    {
+      // Editor Properties
       backgroundColor = Qt::darkGray;
+      drawQuality = DRAW_QUALITY_MED;
+      layerSkipSize = 5;
 
+      // Splicing Properties
       customPrefixCode.clear();
       exportComments = true;
       exportDuplicateAxisPositions = false;
       printSkirt = true;
       skirtDistance = 2;
 
+      // Printer properties.
       extruderList.push_back(ExtruderData(Qt::green));
       extruderList.push_back(ExtruderData(Qt::blue, 3.0));
       //extruderList.push_back(ExtruderData(Qt::blue, 23.5));
       platformWidth = 200;
       platformHeight = 200;
 
+      // Advanced properties.
       exportAbsoluteMode = true;
       exportAbsoluteEMode = true;
 
@@ -269,6 +282,8 @@ struct PreferenceData
 
    // Editor properties.
    QColor backgroundColor;
+   DrawQuality drawQuality;
+   int layerSkipSize;
 
    // Splicing properties.
    QString customPrefixCode;

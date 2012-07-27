@@ -103,16 +103,7 @@ void VisualizerView::removeObject(GCodeObject* object)
       VisualizerObjectData& data = mObjectList[objectIndex];
       if (data.object == object)
       {
-         if (data.vertexBuffer)
-         {
-            delete [] data.vertexBuffer;
-            delete [] data.normalBuffer;
-            delete [] data.indexBuffer;
-            data.vertexBuffer = NULL;
-            data.normalBuffer = NULL;
-            data.indexBuffer = NULL;
-         }
-
+         freeObjectBuffers(data);
          mObjectList.erase(mObjectList.begin() + objectIndex);
          break;
       }
@@ -128,15 +119,7 @@ void VisualizerView::clearObjects()
    for (int objectIndex = 0; objectIndex < objectCount; ++objectIndex)
    {
       VisualizerObjectData& data = mObjectList[objectIndex];
-      if (data.vertexBuffer)
-      {
-         delete [] data.vertexBuffer;
-         delete [] data.normalBuffer;
-         delete [] data.indexBuffer;
-         data.vertexBuffer = NULL;
-         data.normalBuffer = NULL;
-         data.indexBuffer = NULL;
-      }
+      freeObjectBuffers(data);
    }
    mObjectList.clear();
 
@@ -156,9 +139,23 @@ QSize VisualizerView::sizeHint() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void VisualizerView::onBackgroundColorChanged()
+void VisualizerView::regenerateGeometry()
 {
-   qglClearColor(mPrefs.backgroundColor);
+   int objectCount = (int)mObjectList.size();
+   for (int objectIndex = 0; objectIndex < objectCount; ++objectIndex)
+   {
+      VisualizerObjectData& data = mObjectList[objectIndex];
+      freeObjectBuffers(data);
+      generateGeometry(data);
+   }
+
+   updateGL();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void VisualizerView::onBackgroundColorChanged(const QColor& color)
+{
+   qglClearColor(color);
    updateGL();
 }
 
@@ -210,7 +207,7 @@ void VisualizerView::setXRotation(double angle)
 ////////////////////////////////////////////////////////////////////////////////
 void VisualizerView::setYRotation(double angle)
 {
-   normalizeAngle(angle);
+   //normalizeAngle(angle);
    if (angle != mCameraRotTarget[Y])
    {
       mCameraRotTarget[Y] = angle;
@@ -222,7 +219,7 @@ void VisualizerView::setYRotation(double angle)
 ////////////////////////////////////////////////////////////////////////////////
 void VisualizerView::setZRotation(double angle)
 {
-   normalizeAngle(angle);
+   //normalizeAngle(angle);
    if (angle != mCameraRotTarget[Z])
    {
       mCameraRotTarget[Z] = angle;
@@ -257,16 +254,15 @@ void VisualizerView::initializeGL()
 
    glEnable(GL_DEPTH_TEST);
    glEnable(GL_CULL_FACE);
-   glShadeModel(GL_SMOOTH);
-   glEnable(GL_LIGHTING);
-   glEnable(GL_LIGHT0);
+   //glShadeModel(GL_SMOOTH);
    //glEnable(GL_MULTISAMPLE);
    glEnable(GL_COLOR_MATERIAL);
-   static GLfloat lightPosition[4] = { 0.5, 5.0, 7.0, 1.0 };
-   glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
    glEnable(GL_POLYGON_OFFSET_FILL);
    glPolygonOffset(10.0, 1.0);
    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
+   static GLfloat lightPosition[4] = { 1.0, 2.0, 1.0, 1.0 };
+   glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -392,8 +388,7 @@ void VisualizerView::wheelEvent(QWheelEvent* event)
 void VisualizerView::drawObject(const VisualizerObjectData& object)
 {
    glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
-   glEnableClientState(GL_VERTEX_ARRAY);
-   glEnableClientState(GL_NORMAL_ARRAY);
+   glPushAttrib(GL_LIGHTING_BIT);
    glPushMatrix();
 
    const double* offset = object.object->getOffsetPos();
@@ -411,12 +406,61 @@ void VisualizerView::drawObject(const VisualizerObjectData& object)
              mPrefs.extruderList[extruderIndex].color.blueF(),
              1.0);
 
-   glVertexPointer(3, GL_DOUBLE, 0, object.vertexBuffer);
-   glNormalPointer(GL_DOUBLE, 0, object.normalBuffer);
-   glDrawElements(GL_QUADS, object.quadCount * 4, GL_UNSIGNED_INT, object.indexBuffer);
+   switch (mPrefs.drawQuality)
+   {
+   case DRAW_QUALITY_LOW:
+      {
+         glEnableClientState(GL_VERTEX_ARRAY);
+
+         glLineWidth(1.0f);
+         glVertexPointer(3, GL_DOUBLE, 0, object.vertexBuffer);
+         glDrawArrays(GL_LINES, 0, object.vertexCount);
+      }
+      break;
+   case DRAW_QUALITY_MED:
+   case DRAW_QUALITY_HIGH:
+      {
+         glEnable(GL_LIGHTING);
+         glEnable(GL_LIGHT0);
+
+         glEnableClientState(GL_VERTEX_ARRAY);
+         glEnableClientState(GL_NORMAL_ARRAY);
+
+         glVertexPointer(3, GL_DOUBLE, 0, object.vertexBuffer);
+         glNormalPointer(GL_DOUBLE, 0, object.normalBuffer);
+         glDrawElements(GL_QUADS, object.quadCount * 4, GL_UNSIGNED_INT, object.indexBuffer);
+      }
+      break;
+   }
 
    glPopMatrix();
+   glPopAttrib();
    glPopClientAttrib();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void VisualizerView::freeObjectBuffers(VisualizerObjectData& data)
+{
+   if (data.vertexBuffer)
+   {
+      delete [] data.vertexBuffer;
+      data.vertexBuffer = NULL;
+   }
+
+   if (data.normalBuffer)
+   {
+      delete [] data.normalBuffer;
+      data.normalBuffer = NULL;
+   }
+
+   if (data.indexBuffer)
+   {
+      delete [] data.indexBuffer;
+      data.indexBuffer = NULL;
+   }
+
+   data.vertexCount = 0;
+   data.quadCount = 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -427,18 +471,9 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
       return;
    }
 
-   if (data.vertexBuffer)
-   {
-      delete [] data.vertexBuffer;
-      delete [] data.normalBuffer;
-      delete [] data.indexBuffer;
-      data.vertexBuffer = NULL;
-      data.normalBuffer = NULL;
-      data.indexBuffer = NULL;
+   freeObjectBuffers(data);
 
-      data.vertexCount = 0;
-      data.quadCount = 0;
-   }
+   int skipCount = mPrefs.layerSkipSize + 1;
 
    // Before we can allocate memory for our vertex buffers, we first need to
    // determine exactly how many vertices we need.
@@ -447,6 +482,19 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
    for (int levelIndex = 0; levelIndex < levelCount; ++levelIndex)
    {
       const std::vector<GCodeCommand>& levelData = data.object->getLevel(levelIndex).codes;
+
+      // Skip layers if necessary.
+      if (mPrefs.layerSkipSize > 0)
+      {
+         skipCount++;
+
+         if (skipCount <= mPrefs.layerSkipSize)
+         {
+            continue;
+         }
+
+         skipCount = 0;
+      }
 
       int commandCount = (int)levelData.size();
       for (int commandIndex = 0; commandIndex < commandCount; ++commandIndex)
@@ -458,10 +506,31 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
             // We only draw a line segment if we are extruding filament on this line.
             if (command.axisValue[E] != 0.0 && lastE + command.axisValue[E] > 0.0)
             {
-               // The line segment will consist of 8 points that
-               // form together to make a rectangular box shape.
-               data.vertexCount += 8;
-               data.quadCount += 6;
+               switch (mPrefs.drawQuality)
+               {
+               case DRAW_QUALITY_LOW:
+                  {
+                     // The line segment will consist of a single line between two points.
+                     data.vertexCount += 2;
+                  }
+                  break;
+               case DRAW_QUALITY_MED:
+                  {
+                     // The line segment will consist of 8 points that
+                     // form together to make two flat quads.
+                     data.vertexCount += 8;
+                     data.quadCount += 4;
+                  }
+                  break;
+               case DRAW_QUALITY_HIGH:
+                  {
+                     // The line segment will consist of 8 points that
+                     // form together to make a rectangular box shape.
+                     data.vertexCount += 8;
+                     data.quadCount += 4;
+                  }
+                  break;
+               }
             }
 
             lastE += command.axisValue[E];
@@ -476,8 +545,11 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
    if (data.vertexCount > 0)
    {
       data.vertexBuffer = new double[data.vertexCount * 3];
-      data.normalBuffer = new double[data.vertexCount * 3];
-      data.indexBuffer = new unsigned int[data.quadCount * 4];
+      if (mPrefs.drawQuality != DRAW_QUALITY_LOW)
+      {
+         data.normalBuffer = new double[data.vertexCount * 3];
+         data.indexBuffer = new unsigned int[data.quadCount * 4];
+      }
 
       double radius = data.object->getAverageLayerHeight() * 0.5;
       QVector3D up = QVector3D(0.0, 0.0, 1.0);
@@ -493,6 +565,19 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
       {
          const std::vector<GCodeCommand>& levelData = data.object->getLevel(levelIndex).codes;
 
+         // Skip layers if necessary.
+         if (mPrefs.layerSkipSize > 0)
+         {
+            skipCount++;
+
+            if (skipCount <= mPrefs.layerSkipSize)
+            {
+               continue;
+            }
+
+            skipCount = 0;
+         }
+
          int commandCount = (int)levelData.size();
          for (int commandIndex = 0; commandIndex < commandCount; ++commandIndex)
          {
@@ -503,85 +588,101 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
                // We only draw a line segment if we are extruding filament on this line.
                if (command.axisValue[E] != 0.0 && lastPos[E] + command.axisValue[E] > 0.0)
                {
-                  // Set up a rotation matrix
                   QVector3D p1 = QVector3D(lastPos[X], lastPos[Y], lastPos[Z]);
                   QVector3D p2 = QVector3D(command.axisValue[X], command.axisValue[Y], command.axisValue[Z]);
-                  QMatrix4x4 rot;
-                  rot.lookAt(p2 - p1, QVector3D(0.0, 0.0, 0.0), up);
+                  
+                  switch (mPrefs.drawQuality)
+                  {
+                  case DRAW_QUALITY_LOW:
+                     {
+                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1);
+                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2);
+                     }
+                     break;
 
-                  QVector3D right;
-                  right.setX(1.0);
-                  right = right * rot;
+                  case DRAW_QUALITY_MED:
+                  case DRAW_QUALITY_HIGH:
+                     {
+                        // Set up a rotation matrix
+                        QMatrix4x4 rot;
+                        rot.lookAt(p2 - p1, QVector3D(0.0, 0.0, 0.0), up);
 
-                  QVector3D vec = (p2 - p1).normalized();
-                  QVector3D norm;
+                        QVector3D right;
+                        right.setX(1.0);
+                        right = right * rot;
 
-                  int vertexIndex = pointIndex / 3;
+                        QVector3D vec = (p2 - p1).normalized();
+                        QVector3D norm;
 
-                  // Generate our quads.
-                  // Top
-                  data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_TOP_RIGHT;
-                  data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_TOP_LEFT;
-                  data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_TOP_LEFT;
-                  data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_TOP_RIGHT;
-                  quadIndex += 4;
+                        int vertexIndex = pointIndex / 3;
 
-                  // Right
-                  data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_BOT_RIGHT;
-                  data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_TOP_RIGHT;
-                  data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_TOP_RIGHT;
-                  data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_BOT_RIGHT;
-                  quadIndex += 4;
+                        // Generate our quads.
+                        // Left
+                        data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_TOP_LEFT;
+                        data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_BOT_LEFT;
+                        data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_BOT_LEFT;
+                        data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_TOP_LEFT;
+                        quadIndex += 4;
 
-                  // Bottom
-                  data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_BOT_LEFT;
-                  data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_BOT_RIGHT;
-                  data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_BOT_RIGHT;
-                  data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_BOT_LEFT;
-                  quadIndex += 4;
+                        // Top
+                        data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_TOP_RIGHT;
+                        data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_TOP_LEFT;
+                        data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_TOP_LEFT;
+                        data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_TOP_RIGHT;
+                        quadIndex += 4;
 
-                  // Left
-                  data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_TOP_LEFT;
-                  data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_BOT_LEFT;
-                  data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_BOT_LEFT;
-                  data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_TOP_LEFT;
-                  quadIndex += 4;
+                        // Right
+                        data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_BOT_RIGHT;
+                        data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_TOP_RIGHT;
+                        data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_TOP_RIGHT;
+                        data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_BOT_RIGHT;
+                        quadIndex += 4;
 
-                  // First cap
-                  data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_TOP_LEFT;
-                  data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_TOP_RIGHT;
-                  data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_FIRST_BOT_RIGHT;
-                  data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_FIRST_BOT_LEFT;
-                  quadIndex += 4;
+                        // Bottom
+                        data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_BOT_LEFT;
+                        data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_BOT_RIGHT;
+                        data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_BOT_RIGHT;
+                        data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_BOT_LEFT;
+                        quadIndex += 4;
 
-                  // Second cap
-                  data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_SECOND_TOP_RIGHT;
-                  data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_SECOND_TOP_LEFT;
-                  data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_BOT_LEFT;
-                  data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_BOT_RIGHT;
-                  quadIndex += 4;
+                        //// First cap
+                        //data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_TOP_LEFT;
+                        //data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_TOP_RIGHT;
+                        //data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_FIRST_BOT_RIGHT;
+                        //data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_FIRST_BOT_LEFT;
+                        //quadIndex += 4;
 
-                  // Generate our 8 vertices for this rectangle segment.
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + up * radius - right * radius - vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + up * radius + right * radius - vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - up * radius - right * radius - vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - up * radius + right * radius - vec * radius);
+                        //// Second cap
+                        //data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_SECOND_TOP_RIGHT;
+                        //data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_SECOND_TOP_LEFT;
+                        //data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_BOT_LEFT;
+                        //data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_BOT_RIGHT;
+                        //quadIndex += 4;
 
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + up * radius - right * radius + vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + up * radius + right * radius + vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - up * radius - right * radius + vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - up * radius + right * radius + vec * radius);
+                        // Generate our 8 vertices for this rectangle segment.
+                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + up * radius - right * radius - vec * radius);
+                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + up * radius + right * radius - vec * radius);
+                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - up * radius - right * radius - vec * radius);
+                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - up * radius + right * radius - vec * radius);
 
-                  // Generate our 8 vertex normal values.
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (up - right - vec));
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (up + right - vec));
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (-up - right - vec));
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (-up + right - vec));
+                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + up * radius - right * radius + vec * radius);
+                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + up * radius + right * radius + vec * radius);
+                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - up * radius - right * radius + vec * radius);
+                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - up * radius + right * radius + vec * radius);
 
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (up - right + vec));
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (up + right + vec));
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (-up - right + vec));
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (-up + right + vec));
+                        // Generate our 8 vertex normal values.
+                        addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (up - right - vec));
+                        addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (up + right - vec));
+                        addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (-up - right - vec));
+                        addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (-up + right - vec));
+
+                        addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (up - right + vec));
+                        addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (up + right + vec));
+                        addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (-up - right + vec));
+                        addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (-up + right + vec));
+                     }
+                     break;
+                  }
                }
 
                for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
