@@ -137,6 +137,19 @@ enum GCodeType
    MCODE_EMERGENCY_STOP                   = 2000,  // M0
 };
 
+enum PointType
+{
+   POINT_FIRST_TOP_LEFT,
+   POINT_FIRST_TOP_RIGHT,
+   POINT_FIRST_BOT_LEFT,
+   POINT_FIRST_BOT_RIGHT,
+
+   POINT_SECOND_TOP_LEFT,
+   POINT_SECOND_TOP_RIGHT,
+   POINT_SECOND_BOT_LEFT,
+   POINT_SECOND_BOT_RIGHT,
+};
+
 /**
  * Structural data for each G code command.
  */
@@ -224,7 +237,9 @@ struct VisualizerObjectData
 
    double*        vertexBuffer;
    double*        normalBuffer;
+   unsigned int*  indexBuffer;
    int            vertexCount;
+   unsigned int   quadCount;
 };
 
 struct PreferenceData
