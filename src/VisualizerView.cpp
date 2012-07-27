@@ -253,11 +253,11 @@ void VisualizerView::initializeGL()
 
    glEnable(GL_DEPTH_TEST);
    glEnable(GL_CULL_FACE);
-   //glShadeModel(GL_SMOOTH);
-   //glEnable(GL_MULTISAMPLE);
+   glShadeModel(GL_SMOOTH);
+   glEnable(GL_MULTISAMPLE);
    glEnable(GL_COLOR_MATERIAL);
-   glEnable(GL_POLYGON_OFFSET_FILL);
-   glPolygonOffset(10.0, 1.0);
+   //glEnable(GL_POLYGON_OFFSET_FILL);
+   //glPolygonOffset(1.0, 1.0);
    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
    static GLfloat lightPosition[4] = { 1.0, 2.0, 1.0, 1.0 };
@@ -665,10 +665,10 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
                         addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - up * radius - right * radius - vec * radius);
                         addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - up * radius + right * radius - vec * radius);
 
-                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + up * radius - right * radius + vec * radius);
-                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + up * radius + right * radius + vec * radius);
-                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - up * radius - right * radius + vec * radius);
-                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - up * radius + right * radius + vec * radius);
+                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + up * radius * 0.95 - right * radius + vec * radius);
+                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + up * radius * 0.95 + right * radius + vec * radius);
+                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - up * radius * 0.95 - right * radius + vec * radius);
+                        addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - up * radius * 0.95 + right * radius + vec * radius);
 
                         // Generate our 8 vertex normal values.
                         addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (up - right - vec));
