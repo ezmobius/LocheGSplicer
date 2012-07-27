@@ -78,7 +78,9 @@ void VisualizerView::addObject(GCodeObject* object)
    data.object = object;
    data.vertexBuffer = NULL;
    data.normalBuffer = NULL;
+   data.indexBuffer = NULL;
    data.vertexCount = 0;
+   data.quadCount = 0;
 
    generateGeometry(data);
 
@@ -105,7 +107,10 @@ void VisualizerView::removeObject(GCodeObject* object)
          {
             delete [] data.vertexBuffer;
             delete [] data.normalBuffer;
+            delete [] data.indexBuffer;
             data.vertexBuffer = NULL;
+            data.normalBuffer = NULL;
+            data.indexBuffer = NULL;
          }
 
          mObjectList.erase(mObjectList.begin() + objectIndex);
@@ -127,7 +132,10 @@ void VisualizerView::clearObjects()
       {
          delete [] data.vertexBuffer;
          delete [] data.normalBuffer;
+         delete [] data.indexBuffer;
          data.vertexBuffer = NULL;
+         data.normalBuffer = NULL;
+         data.indexBuffer = NULL;
       }
    }
    mObjectList.clear();
@@ -252,10 +260,12 @@ void VisualizerView::initializeGL()
    glShadeModel(GL_SMOOTH);
    glEnable(GL_LIGHTING);
    glEnable(GL_LIGHT0);
-   glEnable(GL_MULTISAMPLE);
+   //glEnable(GL_MULTISAMPLE);
    glEnable(GL_COLOR_MATERIAL);
    static GLfloat lightPosition[4] = { 0.5, 5.0, 7.0, 1.0 };
    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+   glEnable(GL_POLYGON_OFFSET_FILL);
+   glPolygonOffset(10.0, 1.0);
    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 }
 
@@ -330,7 +340,7 @@ void VisualizerView::resizeGL(int width, int height)
    xmin = ymin * aspect;
    xmax = ymax * aspect;
 
-   glFrustum(xmin, xmax, ymin, ymax, 0.1, 10000.0);
+   glFrustum(xmin, xmax, ymin, ymax, 0.1, 1000.0);
 
    glMatrixMode(GL_MODELVIEW);
 }
@@ -403,7 +413,7 @@ void VisualizerView::drawObject(const VisualizerObjectData& object)
 
    glVertexPointer(3, GL_DOUBLE, 0, object.vertexBuffer);
    glNormalPointer(GL_DOUBLE, 0, object.normalBuffer);
-   glDrawArrays(GL_TRIANGLES, 0, object.vertexCount);
+   glDrawElements(GL_QUADS, object.quadCount * 4, GL_UNSIGNED_INT, object.indexBuffer);
 
    glPopMatrix();
    glPopClientAttrib();
@@ -420,13 +430,19 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
    if (data.vertexBuffer)
    {
       delete [] data.vertexBuffer;
+      delete [] data.normalBuffer;
+      delete [] data.indexBuffer;
       data.vertexBuffer = NULL;
+      data.normalBuffer = NULL;
+      data.indexBuffer = NULL;
+
+      data.vertexCount = 0;
+      data.quadCount = 0;
    }
 
    // Before we can allocate memory for our vertex buffers, we first need to
    // determine exactly how many vertices we need.
-   data.vertexCount = 0;
-   double lastPos[AXIS_NUM] = {0,};
+   double lastE = 0.0;
    int levelCount = data.object->getLevelCount();
    for (int levelIndex = 0; levelIndex < levelCount; ++levelIndex)
    {
@@ -440,19 +456,18 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
          if (command.hasAxis)
          {
             // We only draw a line segment if we are extruding filament on this line.
-            if (command.axisValue[E] != 0.0 && lastPos[E] + command.axisValue[E] > 0.0)
+            if (command.axisValue[E] != 0.0 && lastE + command.axisValue[E] > 0.0)
             {
-               // The line segment will be a four sided cylinder,
-               // with two triangles per side.  Then we cap the ends
-               // with another two triangles each.
-               //data.vertexCount += 3 * 3 * 4;
-               data.vertexCount += 3 * 2 * 4;
+               // The line segment will consist of 8 points that
+               // form together to make a rectangular box shape.
+               data.vertexCount += 8;
+               data.quadCount += 6;
             }
 
-            lastPos[E] += command.axisValue[E];
-            if (lastPos[E] > 0.0)
+            lastE += command.axisValue[E];
+            if (lastE > 0.0)
             {
-               lastPos[E] = 0.0;
+               lastE = 0.0;
             }
          }
       }
@@ -462,17 +477,17 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
    {
       data.vertexBuffer = new double[data.vertexCount * 3];
       data.normalBuffer = new double[data.vertexCount * 3];
+      data.indexBuffer = new unsigned int[data.quadCount * 4];
+
       double radius = data.object->getAverageLayerHeight() * 0.5;
       QVector3D up = QVector3D(0.0, 0.0, 1.0);
 
-      for (int axis = 0; axis < AXIS_NUM; ++axis)
-      {
-         lastPos[axis] = 0.0;
-      }
+      double lastPos[AXIS_NUM] = {0.0,};
 
       // Now fill in our newly allocated buffer space.
       int pointIndex = 0;
       int normalIndex = 0;
+      int quadIndex = 0;
 
       for (int levelIndex = 0; levelIndex < levelCount; ++levelIndex)
       {
@@ -499,102 +514,74 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
                   right = right * rot;
 
                   QVector3D vec = (p2 - p1).normalized();
+                  QVector3D norm;
 
-                  // Side 1 - Left
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - right * radius - up * radius - vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - right * radius - up * radius + vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - right * radius + up * radius + vec * radius);
+                  int vertexIndex = pointIndex / 3;
 
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - right * radius + up * radius + vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - right * radius + up * radius - vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - right * radius - up * radius - vec * radius);
+                  // Generate our quads.
+                  // Top
+                  data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_TOP_RIGHT;
+                  data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_TOP_LEFT;
+                  data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_TOP_LEFT;
+                  data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_TOP_RIGHT;
+                  quadIndex += 4;
 
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -right);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -right);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -right);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -right);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -right);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -right);
+                  // Right
+                  data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_BOT_RIGHT;
+                  data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_TOP_RIGHT;
+                  data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_TOP_RIGHT;
+                  data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_BOT_RIGHT;
+                  quadIndex += 4;
 
-                  // Side 2 - Top
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - right * radius + up * radius - vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - right * radius + up * radius + vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + right * radius + up * radius + vec * radius);
+                  // Bottom
+                  data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_BOT_LEFT;
+                  data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_BOT_RIGHT;
+                  data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_BOT_RIGHT;
+                  data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_BOT_LEFT;
+                  quadIndex += 4;
 
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + right * radius + up * radius + vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + right * radius + up * radius - vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - right * radius + up * radius - vec * radius);
+                  // Left
+                  data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_TOP_LEFT;
+                  data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_BOT_LEFT;
+                  data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_BOT_LEFT;
+                  data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_TOP_LEFT;
+                  quadIndex += 4;
 
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, up);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, up);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, up);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, up);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, up);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, up);
+                  // First cap
+                  data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_FIRST_TOP_LEFT;
+                  data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_FIRST_TOP_RIGHT;
+                  data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_FIRST_BOT_RIGHT;
+                  data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_FIRST_BOT_LEFT;
+                  quadIndex += 4;
 
-                  // Side 3 - Right
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + right * radius + up * radius - vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + right * radius + up * radius + vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + right * radius - up * radius + vec * radius);
+                  // Second cap
+                  data.indexBuffer[quadIndex + 0] = vertexIndex + POINT_SECOND_TOP_RIGHT;
+                  data.indexBuffer[quadIndex + 1] = vertexIndex + POINT_SECOND_TOP_LEFT;
+                  data.indexBuffer[quadIndex + 2] = vertexIndex + POINT_SECOND_BOT_LEFT;
+                  data.indexBuffer[quadIndex + 3] = vertexIndex + POINT_SECOND_BOT_RIGHT;
+                  quadIndex += 4;
 
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + right * radius - up * radius + vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + right * radius - up * radius - vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + right * radius + up * radius - vec * radius);
+                  // Generate our 8 vertices for this rectangle segment.
+                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + up * radius - right * radius - vec * radius);
+                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + up * radius + right * radius - vec * radius);
+                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - up * radius - right * radius - vec * radius);
+                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - up * radius + right * radius - vec * radius);
 
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, right);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, right);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, right);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, right);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, right);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, right);
+                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + up * radius - right * radius + vec * radius);
+                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + up * radius + right * radius + vec * radius);
+                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - up * radius - right * radius + vec * radius);
+                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - up * radius + right * radius + vec * radius);
 
-                  // Side 4 - Bottom
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + right * radius - up * radius - vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + right * radius - up * radius + vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - right * radius - up * radius + vec * radius);
+                  // Generate our 8 vertex normal values.
+                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (up - right - vec));
+                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (up + right - vec));
+                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (-up - right - vec));
+                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (-up + right - vec));
 
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - right * radius - up * radius + vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - right * radius - up * radius - vec * radius);
-                  addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + right * radius - up * radius - vec * radius);
-
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -up);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -up);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -up);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -up);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -up);
-                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -up);
-
-                  //// Starting cap
-                  //addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - right * radius + up * radius - vec * radius);
-                  //addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + right * radius + up * radius - vec * radius);
-                  //addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + right * radius - up * radius - vec * radius);
-
-                  //addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 + right * radius - up * radius - vec * radius);
-                  //addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - right * radius - up * radius - vec * radius);
-                  //addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p1 - right * radius + up * radius - vec * radius);
-
-                  //addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -vec);
-                  //addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -vec);
-                  //addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -vec);
-                  //addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -vec);
-                  //addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -vec);
-                  //addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, -vec);
-
-                  //// Ending cap
-                  //addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + right * radius + up * radius + vec * radius);
-                  //addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - right * radius + up * radius + vec * radius);
-                  //addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - right * radius - up * radius + vec * radius);
-
-                  //addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 - right * radius - up * radius + vec * radius);
-                  //addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + right * radius - up * radius + vec * radius);
-                  //addGeometryPoint(&data.vertexBuffer[pointIndex], pointIndex, p2 + right * radius + up * radius + vec * radius);
-
-                  //addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, vec);
-                  //addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, vec);
-                  //addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, vec);
-                  //addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, vec);
-                  //addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, vec);
-                  //addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, vec);
+                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (up - right + vec));
+                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (up + right + vec));
+                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (-up - right + vec));
+                  addGeometryPoint(&data.normalBuffer[normalIndex], normalIndex, (-up + right + vec));
                }
 
                for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
@@ -613,6 +600,8 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
 
       // Just a simple check to make sure we actually used the proper number of vertices.
       assert(data.vertexCount * 3 == pointIndex);
+      assert(data.vertexCount * 3 == normalIndex);
+      assert(data.quadCount * 4 == quadIndex);
    }
 }
 
