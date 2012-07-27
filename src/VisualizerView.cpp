@@ -145,7 +145,6 @@ void VisualizerView::regenerateGeometry()
    for (int objectIndex = 0; objectIndex < objectCount; ++objectIndex)
    {
       VisualizerObjectData& data = mObjectList[objectIndex];
-      freeObjectBuffers(data);
       generateGeometry(data);
    }
 
@@ -473,10 +472,9 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
 
    freeObjectBuffers(data);
 
-   int skipCount = mPrefs.layerSkipSize + 1;
-
    // Before we can allocate memory for our vertex buffers, we first need to
    // determine exactly how many vertices we need.
+   int skipCount = mPrefs.layerSkipSize + 1;
    double lastE = 0.0;
    int levelCount = data.object->getLevelCount();
    for (int levelIndex = 0; levelIndex < levelCount; ++levelIndex)
@@ -544,6 +542,8 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
 
    if (data.vertexCount > 0)
    {
+      skipCount = mPrefs.layerSkipSize + 1;
+
       data.vertexBuffer = new double[data.vertexCount * 3];
       if (mPrefs.drawQuality != DRAW_QUALITY_LOW)
       {
