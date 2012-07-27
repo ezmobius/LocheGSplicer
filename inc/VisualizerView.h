@@ -43,7 +43,7 @@ public:
     *
     * @param[in]  object     The object.
     */
-   void addObject(GCodeObject* object);
+   bool addObject(GCodeObject* object);
    void removeObject(GCodeObject* object);
 
    void clearObjects();
@@ -51,7 +51,9 @@ public:
    QSize minimumSizeHint() const;
    QSize sizeHint() const;
 
-   void regenerateGeometry();
+   bool regenerateGeometry();
+
+   const QString& getError() const;
 
 public slots:
    void onBackgroundColorChanged(const QColor& color);
@@ -100,7 +102,7 @@ private:
    /**
     * Generate geometry data for the given object.
     */
-   void generateGeometry(VisualizerObjectData& data);
+   bool generateGeometry(VisualizerObjectData& data);
    void addGeometryPoint(double* buffer, int& index, const QVector3D& point);
 
    double mCameraRot[AXIS_NUM_NO_E];
@@ -117,6 +119,8 @@ private:
    const PreferenceData& mPrefs;
    
    std::vector<VisualizerObjectData> mObjectList;
+
+   QString mError;
 };
 
 #endif // VISUALIZER_VIEW_H

@@ -72,7 +72,7 @@ VisualizerView::~VisualizerView()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void VisualizerView::addObject(GCodeObject* object)
+bool VisualizerView::addObject(GCodeObject* object)
 {
    VisualizerObjectData data;
    data.object = object;
@@ -82,7 +82,11 @@ void VisualizerView::addObject(GCodeObject* object)
    data.vertexCount = 0;
    data.quadCount = 0;
 
-   generateGeometry(data);
+   if (!generateGeometry(data))
+   {
+      freeObjectBuffers(data);
+      return false;
+   }
 
    mObjectList.push_back(data);
 
@@ -139,16 +143,26 @@ QSize VisualizerView::sizeHint() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void VisualizerView::regenerateGeometry()
+bool VisualizerView::regenerateGeometry()
 {
+   bool result = true;
+
    int objectCount = (int)mObjectList.size();
    for (int objectIndex = 0; objectIndex < objectCount; ++objectIndex)
    {
       VisualizerObjectData& data = mObjectList[objectIndex];
-      generateGeometry(data);
+      result &= generateGeometry(data);
    }
 
    updateGL();
+
+   return result;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+const QString& VisualizerView::getError() const
+{
+   return mError;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -463,11 +477,12 @@ void VisualizerView::freeObjectBuffers(VisualizerObjectData& data)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void VisualizerView::generateGeometry(VisualizerObjectData& data)
+bool VisualizerView::generateGeometry(VisualizerObjectData& data)
 {
    if (!data.object)
    {
-      return;
+      mError = "No object to generate geometry for.";
+      return false;
    }
 
    freeObjectBuffers(data);
@@ -477,7 +492,7 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
    int skipCount = mPrefs.layerSkipSize + 1;
    double lastE = 0.0;
    int levelCount = data.object->getLevelCount();
-   for (int levelIndex = 0; levelIndex < levelCount; ++levelIndex)
+   for (int levelIndex = 1; levelIndex < levelCount; ++levelIndex)
    {
       const std::vector<GCodeCommand>& levelData = data.object->getLevel(levelIndex).codes;
 
@@ -544,11 +559,22 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
    {
       skipCount = mPrefs.layerSkipSize + 1;
 
-      data.vertexBuffer = new double[data.vertexCount * 3];
-      if (mPrefs.drawQuality != DRAW_QUALITY_LOW)
+      // TODO: To minimize memory allocation errors, allow
+      // the memory to be broken into smaller block sizes.
+      try
       {
-         data.normalBuffer = new double[data.vertexCount * 3];
-         data.indexBuffer = new unsigned int[data.quadCount * 4];
+         data.vertexBuffer = new double[data.vertexCount * 3];
+         if (mPrefs.drawQuality != DRAW_QUALITY_LOW)
+         {
+            data.normalBuffer = new double[data.vertexCount * 3];
+            data.indexBuffer = new unsigned int[data.quadCount * 4];
+         }
+      }
+      catch (...)
+      {
+         mError = "Memory allocation error.";
+         freeObjectBuffers(data);
+         return false;
       }
 
       double radius = data.object->getAverageLayerHeight() * 0.5;
@@ -561,7 +587,7 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
       int normalIndex = 0;
       int quadIndex = 0;
 
-      for (int levelIndex = 0; levelIndex < levelCount; ++levelIndex)
+      for (int levelIndex = 1; levelIndex < levelCount; ++levelIndex)
       {
          const std::vector<GCodeCommand>& levelData = data.object->getLevel(levelIndex).codes;
 
@@ -700,10 +726,17 @@ void VisualizerView::generateGeometry(VisualizerObjectData& data)
       }
 
       // Just a simple check to make sure we actually used the proper number of vertices.
-      assert(data.vertexCount * 3 == pointIndex);
-      assert(data.vertexCount * 3 == normalIndex);
-      assert(data.quadCount * 4 == quadIndex);
+      if (data.vertexCount * 3 != pointIndex ||
+          (mPrefs.drawQuality != DRAW_QUALITY_LOW &&
+          (data.vertexCount * 3 != normalIndex ||
+          data.quadCount * 4 != quadIndex)))
+      {
+         mError = "Checksum failure with geometry generation.";
+         return false;
+      }
    }
+
+   return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

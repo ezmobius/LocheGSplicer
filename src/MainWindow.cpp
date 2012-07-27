@@ -66,7 +66,10 @@ void MainWindow::onOptionsPressed()
 
       if (regenerateGeometry)
       {
-         mVisualizerView->regenerateGeometry();
+         if (!mVisualizerView->regenerateGeometry())
+         {
+            QMessageBox::critical(this, "Failure!", mVisualizerView->getError(), QMessageBox::Ok);
+         }
       }
    }
    else
@@ -149,6 +152,7 @@ void MainWindow::onAddPressed()
       // Attempt to load our given file.
       GCodeObject* newObject = new GCodeObject(mPrefs);
 
+      // TODO: Add a progress bar.
       if (!newObject->loadFile(fileName))
       {
          // Failed to load the file.
@@ -179,7 +183,10 @@ void MainWindow::onAddPressed()
       }
 
       newObject->setExtruder(extruderIndex);
-      mVisualizerView->addObject(newObject);
+      if (!mVisualizerView->addObject(newObject))
+      {
+         QMessageBox::critical(this, "Failure!", mVisualizerView->getError(), QMessageBox::Ok);
+      }
       mObjectList.push_back(newObject);
 
       int rowIndex = mObjectListWidget->rowCount();
