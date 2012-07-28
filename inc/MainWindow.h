@@ -26,6 +26,7 @@
 
 QT_BEGIN_NAMESPACE
 class QListView;
+class QSlider;
 class QSplitter;
 class QPushButton;
 class QTableWidget;
@@ -49,6 +50,7 @@ protected:
 public slots:
    void onOptionsPressed();
    void onHelpPressed();
+   void onLayerSliderChanged(int value);
    void onObjectSelectionChanged();
    void onAddPressed();
    void onRemovePressed();
@@ -65,6 +67,8 @@ public slots:
    void onExtruderIndexChanged(int index);
 
 private:
+   void updateLayerSlider();
+
    void setupUI();
    void setupConnections();
 
@@ -75,6 +79,7 @@ private:
 
    QSplitter*        mMainSplitter;
    VisualizerView*   mVisualizerView;
+   QSlider*          mLayerSlider;
    QTableWidget*     mObjectListWidget;
    QPushButton*      mAddFileButton;
    QPushButton*      mRemoveFileButton;

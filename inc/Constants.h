@@ -247,6 +247,7 @@ struct VisualizerBufferData
       indexBuffer = NULL;
       vertexCount = 0;
       quadCount = 0;
+      height = 0.0;
    }
 
    void free()
@@ -271,6 +272,7 @@ struct VisualizerBufferData
 
       vertexCount = 0;
       quadCount = 0;
+      height = 0.0;
    }
 
    double*        vertexBuffer;
@@ -278,6 +280,7 @@ struct VisualizerBufferData
    unsigned int*  indexBuffer;
    int            vertexCount;
    unsigned int   quadCount;
+   double         height;
 };
 
 struct VisualizerObjectData

@@ -49,8 +49,8 @@ public:
 
    double getAverageLayerHeight() const;
 
-   int getLevelCount() const;
-   const LayerData& getLevel(int levelIndex) const;
+   int getLayerCount() const;
+   const LayerData& getLayer(int levelIndex) const;
 
    /**
     * Retrieves all layer codes at a given layer height and appends
@@ -59,7 +59,7 @@ public:
     * @param[out]  outLayer  The layer data to append to.
     * @param[in]   height    The height to retrieve.
     */
-   bool getLevelAtHeight(std::vector<GCodeCommand>& outLayer, double height) const;
+   bool getLayerAtHeight(std::vector<GCodeCommand>& outLayer, double height) const;
 
    /**
     * Retrieves the layer that is right above a given layer height.
@@ -67,7 +67,7 @@ public:
     * @param[out]  outLayer  The layer to retrieve.
     * @param[in]   height    The height.
     */
-   bool getLevelAboveHeight(const LayerData*& outLayer, double height) const;
+   bool getLayerAboveHeight(const LayerData*& outLayer, double height) const;
 
    const QString& getError() const;
 

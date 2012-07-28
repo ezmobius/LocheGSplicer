@@ -35,7 +35,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 VisualizerView::VisualizerView(const PreferenceData& prefs)
    : QGLWidget(QGLFormat(QGL::SampleBuffers), NULL)
+   , mUpdateTimer(NULL)
    , mPrefs(prefs)
+   , mLayerDrawHeight(0.0)
 {
    for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
    {
@@ -137,6 +139,13 @@ QSize VisualizerView::minimumSizeHint() const
 QSize VisualizerView::sizeHint() const
 {
    return QSize(400, 400);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void VisualizerView::setLayerDrawHeight(double height)
+{
+   mLayerDrawHeight = height;
+   updateGL();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -428,8 +437,11 @@ void VisualizerView::drawObject(const VisualizerObjectData& object)
          {
             const VisualizerBufferData& buffer = object.layers[layerIndex];
 
-            glVertexPointer(3, GL_DOUBLE, 0, buffer.vertexBuffer);
-            glDrawArrays(GL_LINES, 0, buffer.vertexCount);
+            if (layerIndex > 0 && buffer.height <= mLayerDrawHeight)
+            {
+               glVertexPointer(3, GL_DOUBLE, 0, buffer.vertexBuffer);
+               glDrawArrays(GL_LINES, 0, buffer.vertexCount);
+            }
          }
       }
       break;
@@ -449,9 +461,12 @@ void VisualizerView::drawObject(const VisualizerObjectData& object)
          {
             const VisualizerBufferData& buffer = object.layers[layerIndex];
 
-            glVertexPointer(3, GL_DOUBLE, 0, buffer.vertexBuffer);
-            glNormalPointer(GL_DOUBLE, 0, buffer.normalBuffer);
-            glDrawElements(GL_QUADS, buffer.quadCount * 4, GL_UNSIGNED_INT, buffer.indexBuffer);
+            if (layerIndex > 0 && buffer.height <= mLayerDrawHeight)
+            {
+               glVertexPointer(3, GL_DOUBLE, 0, buffer.vertexBuffer);
+               glNormalPointer(GL_DOUBLE, 0, buffer.normalBuffer);
+               glDrawElements(GL_QUADS, buffer.quadCount * 4, GL_UNSIGNED_INT, buffer.indexBuffer);
+            }
          }
       }
       break;
@@ -477,10 +492,10 @@ bool VisualizerView::generateGeometry(VisualizerObjectData& data)
    // determine exactly how many vertices we need.
    int skipCount = mPrefs.layerSkipSize + 1;
    double lastE = 0.0;
-   int levelCount = data.object->getLevelCount();
+   int levelCount = data.object->getLayerCount();
    for (int levelIndex = 1; levelIndex < levelCount; ++levelIndex)
    {
-      const std::vector<GCodeCommand>& levelData = data.object->getLevel(levelIndex).codes;
+      const LayerData& layerData = data.object->getLayer(levelIndex);
 
       // Skip layers if necessary.
       if (mPrefs.layerSkipSize > 0)
@@ -496,15 +511,19 @@ bool VisualizerView::generateGeometry(VisualizerObjectData& data)
       }
 
       VisualizerBufferData buffer;
-      int commandCount = (int)levelData.size();
-      for (int commandIndex = 0; commandIndex < commandCount; ++commandIndex)
-      {
-         const GCodeCommand& command = levelData[commandIndex];
+      buffer.height = layerData.height;
 
-         if (command.hasAxis)
+      const std::vector<GCodeCommand>& codes = layerData.codes;
+
+      int codeCount = (int)codes.size();
+      for (int codeIndex = 0; codeIndex < codeCount; ++codeIndex)
+      {
+         const GCodeCommand& code = codes[codeIndex];
+
+         if (code.hasAxis)
          {
             // We only draw a line segment if we are extruding filament on this line.
-            if (command.axisValue[E] != 0.0 && lastE + command.axisValue[E] > 0.0)
+            if (code.axisValue[E] != 0.0 && lastE + code.axisValue[E] > 0.0)
             {
                switch (mPrefs.drawQuality)
                {
@@ -533,7 +552,7 @@ bool VisualizerView::generateGeometry(VisualizerObjectData& data)
                }
             }
 
-            lastE += command.axisValue[E];
+            lastE += code.axisValue[E];
             if (lastE > 0.0)
             {
                lastE = 0.0;
@@ -558,7 +577,7 @@ bool VisualizerView::generateGeometry(VisualizerObjectData& data)
 
       for (int levelIndex = 1; levelIndex < levelCount; ++levelIndex)
       {
-         const std::vector<GCodeCommand>& levelData = data.object->getLevel(levelIndex).codes;
+         const LayerData& layerData = data.object->getLayer(levelIndex);
 
          // Skip layers if necessary.
          if (mPrefs.layerSkipSize > 0)
@@ -602,18 +621,19 @@ bool VisualizerView::generateGeometry(VisualizerObjectData& data)
          int normalIndex = 0;
          int quadIndex = 0;
 
-         int commandCount = (int)levelData.size();
-         for (int commandIndex = 0; commandIndex < commandCount; ++commandIndex)
+         const std::vector<GCodeCommand>& codes = layerData.codes;
+         int codeCount = (int)codes.size();
+         for (int codeIndex = 0; codeIndex < codeCount; ++codeIndex)
          {
-            const GCodeCommand& command = levelData[commandIndex];
+            const GCodeCommand& code = codes[codeIndex];
 
-            if (command.hasAxis)
+            if (code.hasAxis)
             {
                // We only draw a line segment if we are extruding filament on this line.
-               if (command.axisValue[E] != 0.0 && lastPos[E] + command.axisValue[E] > 0.0)
+               if (code.axisValue[E] != 0.0 && lastPos[E] + code.axisValue[E] > 0.0)
                {
                   QVector3D p1 = QVector3D(lastPos[X], lastPos[Y], lastPos[Z]);
-                  QVector3D p2 = QVector3D(command.axisValue[X], command.axisValue[Y], command.axisValue[Z]);
+                  QVector3D p2 = QVector3D(code.axisValue[X], code.axisValue[Y], code.axisValue[Z]);
                   
                   switch (mPrefs.drawQuality)
                   {
@@ -711,10 +731,10 @@ bool VisualizerView::generateGeometry(VisualizerObjectData& data)
 
                for (int axis = 0; axis < AXIS_NUM_NO_E; ++axis)
                {
-                  lastPos[axis] = command.axisValue[axis];
+                  lastPos[axis] = code.axisValue[axis];
                }
 
-               lastPos[E] += command.axisValue[E];
+               lastPos[E] += code.axisValue[E];
                if (lastPos[E] > 0.0)
                {
                   lastPos[E] = 0.0;

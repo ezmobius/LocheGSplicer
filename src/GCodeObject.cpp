@@ -519,19 +519,19 @@ double GCodeObject::getAverageLayerHeight() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-int GCodeObject::getLevelCount() const
+int GCodeObject::getLayerCount() const
 {
    return (int)mData.size();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const LayerData& GCodeObject::getLevel(int levelIndex) const
+const LayerData& GCodeObject::getLayer(int levelIndex) const
 {
    return mData[levelIndex];
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool GCodeObject::getLevelAtHeight(std::vector<GCodeCommand>& outLayer, double height) const
+bool GCodeObject::getLayerAtHeight(std::vector<GCodeCommand>& outLayer, double height) const
 {
    int layerCount = (int)mData.size();
    for (int layerIndex = 0; layerIndex < layerCount; ++layerIndex)
@@ -552,7 +552,7 @@ bool GCodeObject::getLevelAtHeight(std::vector<GCodeCommand>& outLayer, double h
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool GCodeObject::getLevelAboveHeight(const LayerData*& outLayer, double height) const
+bool GCodeObject::getLayerAboveHeight(const LayerData*& outLayer, double height) const
 {
    int layerCount = (int)mData.size();
    for (int layerIndex = 0; layerIndex < layerCount; ++layerIndex)

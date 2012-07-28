@@ -95,9 +95,9 @@ bool GCodeSplicer::build(const QString& fileName)
    // the header code from the first object, then include our
    // custom header code, and last include our final settings.
    const GCodeObject* object = mObjectList[0];
-   if (object && object->getLevelCount())
+   if (object && object->getLayerCount())
    {
-      const std::vector<GCodeCommand>& header = object->getLevel(0).codes;
+      const std::vector<GCodeCommand>& header = object->getLayer(0).codes;
       int count = (int)header.size();
       for (int index = 0; index < count; ++index)
       {
@@ -194,7 +194,7 @@ bool GCodeSplicer::build(const QString& fileName)
             if (object && object->getExtruder() == currentExtruder)
             {
                std::vector<GCodeCommand> layer;
-               object->getLevelAtHeight(layer, currentLayerHeight);
+               object->getLayerAtHeight(layer, currentLayerHeight);
 
                // If we found some codes for this layer using our current extruder...
                if (!layer.empty())
@@ -351,10 +351,10 @@ bool GCodeSplicer::debugBuildLayerData(const QString& fileName)
    const GCodeObject* object = mObjectList[0];
    if (object)
    {
-      int levelCount = object->getLevelCount();
+      int levelCount = object->getLayerCount();
       for (int levelIndex = 0; levelIndex < levelCount; ++levelIndex)
       {
-         const LayerData& layer = object->getLevel(levelIndex);
+         const LayerData& layer = object->getLayer(levelIndex);
 
          file.write("; ++++++++++++++++++++++++++++++++++++++\n; Begin Layer ");
          file.write(QString::number(levelIndex).toAscii());
@@ -450,7 +450,7 @@ bool GCodeSplicer::getNextLayer(double height, double& outHeight)
       if (object)
       {
          const LayerData* data = NULL;
-         if (object->getLevelAboveHeight(data, height) && data)
+         if (object->getLayerAboveHeight(data, height) && data)
          {
             if (lowestHeight == 0.0 || lowestHeight > data->height)
             {

@@ -51,6 +51,8 @@ public:
    QSize minimumSizeHint() const;
    QSize sizeHint() const;
 
+   void setLayerDrawHeight(double height);
+
    bool regenerateGeometry();
 
    const QString& getError() const;
@@ -114,6 +116,8 @@ private:
    QTimer* mUpdateTimer;
 
    const PreferenceData& mPrefs;
+
+   double mLayerDrawHeight;
    
    std::vector<VisualizerObjectData> mObjectList;
 

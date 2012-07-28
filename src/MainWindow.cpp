@@ -30,6 +30,20 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 MainWindow::MainWindow()
+   : mOptionsButton(NULL)
+   , mHelpButton(NULL)
+   , mMainSplitter(NULL)
+   , mVisualizerView(NULL)
+   , mLayerSlider(NULL)
+   , mObjectListWidget(NULL)
+   , mAddFileButton(NULL)
+   , mRemoveFileButton(NULL)
+   , mPlaterXPosSpin(NULL)
+   , mPlaterYPosSpin(NULL)
+   , mSpliceButton(NULL)
+#ifdef BUILD_DEBUG_CONTROLS
+   , mDebugExportLayerButton(NULL)
+#endif
 {
    setupUI();
    setupConnections();
@@ -83,6 +97,12 @@ void MainWindow::onOptionsPressed()
 void MainWindow::onHelpPressed()
 {
    QMessageBox::information(this, "Help!", "Not implemented yet.", QMessageBox::Ok);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void MainWindow::onLayerSliderChanged(int value)
+{
+   mVisualizerView->setLayerDrawHeight((double)value * 0.001);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -206,6 +226,8 @@ void MainWindow::onAddPressed()
       mObjectListWidget->resizeColumnsToContents();
 
       mSpliceButton->setEnabled(true);
+
+      updateLayerSlider();
    }
 }
 
@@ -237,6 +259,8 @@ void MainWindow::onRemovePressed()
    {
       mSpliceButton->setEnabled(false);
    }
+
+   updateLayerSlider();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -387,6 +411,48 @@ void MainWindow::onExtruderIndexChanged(int index)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+void MainWindow::updateLayerSlider()
+{
+   if (!mLayerSlider)
+   {
+      return;
+   }
+
+   double maxHeight = 0.0;
+   int objectCount = (int)mObjectList.size();
+   for (int objectIndex = 0; objectIndex < objectCount; ++objectIndex)
+   {
+      GCodeObject* object = mObjectList[objectIndex];
+      if (object)
+      {
+         int levelCount = object->getLayerCount();
+         if (levelCount > 0)
+         {
+            const LayerData& layer = object->getLayer(levelCount - 1);
+            if (layer.height > maxHeight)
+            {
+               maxHeight = layer.height;
+            }
+         }
+      }
+   }
+
+   if (maxHeight > 0.0)
+   {
+      // Add just a tiny bit of height to account for precision errors.
+      maxHeight += 0.1;
+
+      mLayerSlider->setMaximum(int(maxHeight * 1000.0));
+      mLayerSlider->setValue(mLayerSlider->maximum());
+      mLayerSlider->show();
+   }
+   else
+   {
+      mLayerSlider->hide();
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
 void MainWindow::setupUI()
 {
    setWindowTitle(tr("LocheGSplicer"));
@@ -399,8 +465,18 @@ void MainWindow::setupUI()
 
    ////////////////////////////////////////////////////////////////////////////////
    // Main visualizer window goes on the left side.
+   QWidget* visualizerWidget = new QWidget();
+   mMainSplitter->addWidget(visualizerWidget);
+
+   QHBoxLayout* visualizerLayout = new QHBoxLayout();
+   visualizerWidget->setLayout(visualizerLayout);
+
    mVisualizerView = new VisualizerView(mPrefs);
-   mMainSplitter->addWidget(mVisualizerView);
+   visualizerLayout->addWidget(mVisualizerView, 1);
+
+   mLayerSlider = new QSlider();
+   mLayerSlider->hide();
+   visualizerLayout->addWidget(mLayerSlider, 0);
 
    ////////////////////////////////////////////////////////////////////////////////
    // GCode list and other plating properties go on the right side.
@@ -509,6 +585,7 @@ void MainWindow::setupConnections()
 {
    connect(mOptionsButton,          SIGNAL(pressed()),               this, SLOT(onOptionsPressed()));
    connect(mHelpButton,             SIGNAL(pressed()),               this, SLOT(onHelpPressed()));
+   connect(mLayerSlider,            SIGNAL(valueChanged(int)),       this, SLOT(onLayerSliderChanged(int)));
    connect(mObjectListWidget,       SIGNAL(itemSelectionChanged()),  this, SLOT(onObjectSelectionChanged()));
    connect(mAddFileButton,          SIGNAL(pressed()),               this, SLOT(onAddPressed()));
    connect(mRemoveFileButton,       SIGNAL(pressed()),               this, SLOT(onRemovePressed()));
