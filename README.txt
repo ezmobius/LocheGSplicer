@@ -1,3 +1,10 @@
+Help Wanted:
+------------
+
+ -In need of programmers that can help with the build process
+  for Mac and Linux operating systems.
+
+
 Licensing:
 ----------
 
