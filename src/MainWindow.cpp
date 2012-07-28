@@ -314,6 +314,9 @@ void MainWindow::onPlaterYPosChanged(double pos)
 ////////////////////////////////////////////////////////////////////////////////
 void MainWindow::onSplicePressed()
 {
+   QMessageBox::information(this, "Splice!", "Not implemented yet.", QMessageBox::Ok);
+   return;
+
    QSettings settings(COMPANY_NAME, APPLICATION_NAME);
    QString lastDir = settings.value(LAST_EXPORT_FOLDER, "").toString();
    lastDir += "\\Spliced";
