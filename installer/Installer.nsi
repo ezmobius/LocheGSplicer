@@ -28,7 +28,7 @@
 ;!define /date NOW "%m-%d-%Y_%H%M%S"
 
 !ifndef VERSION
-  !define VERSION "Beta"
+  !define VERSION "Beta-001"
 !endif
 
 ; HM NIS Edit Wizard helper defines
