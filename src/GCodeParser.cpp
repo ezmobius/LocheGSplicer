@@ -227,3 +227,15 @@ QString GCodeParser::getComment()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+double GCodeParser::getProgress() const
+{
+   // Update the progress of the parse.
+   if (mFile.size() > 0)
+   {
+      return (double)mFile.pos() / (double)mFile.size();
+   }
+
+   return 0.0;
+}
+
+////////////////////////////////////////////////////////////////////////////////

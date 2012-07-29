@@ -68,6 +68,11 @@ public:
     */
    QString getComment();
 
+   /**
+    * Retrieves the current progress of the parse.
+    */
+   double getProgress() const;
+
 protected:
 
 private:

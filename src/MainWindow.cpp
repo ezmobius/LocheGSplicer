@@ -172,7 +172,6 @@ void MainWindow::onAddPressed()
       // Attempt to load our given file.
       GCodeObject* newObject = new GCodeObject(mPrefs);
 
-      // TODO: Add a progress bar.
       if (!newObject->loadFile(fileName))
       {
          // Failed to load the file.
